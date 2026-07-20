@@ -88,72 +88,12 @@ public final class PlayerCommand {
                     if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) { BotGui.openMain(p); return 1; }
                     return 0;
                 }))
-                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("help").executes(ctx -> {
-                    ctx.getSource().getSender().sendMessage(join(spaces(),
-                        Component.text("=== /bot 假人命令帮助 ===", NamedTextColor.GOLD),
-                        Component.text("\n", NamedTextColor.WHITE),
-                        Component.text("\n§6§l基本操作", NamedTextColor.GOLD),
-                        Component.text("\n/bot — 打开假人管理主界面（GUI）"),
-                        Component.text("\n/bot gui — 同上"),
-                        Component.text("\n/bot help — 显示本帮助"),
-                        Component.text("\n/bot <名字> spawn — 在你身边召唤假人"),
-                        Component.text("\n/bot <名字> spawn at <坐标> [facing <坐标>] [in <维度>] — 在指定位置召唤"),
-                        Component.text("\n/bot <名字> menu — 打开该假人的控制面板"),
-                        Component.text("\n/bot <名字> echest — 打开该假人的末影箱"),
-                        Component.text("\n/bot <名字> tp — 将假人传送到你身边"),
-                        Component.text("\n/bot <名字> kill — 杀死假人（可被重生设置恢复）"),
-                        Component.text("\n", NamedTextColor.WHITE),
-                        Component.text("\n§6§l动作控制", NamedTextColor.GOLD),
-                        Component.text("\n/bot <名字> sneak / unsneak — 切换潜行状态"),
-                        Component.text("\n/bot <名字> sprint / unsprint — 切换疾跑状态"),
-                        Component.text("\n/bot <名字> attack — 单次攻击"),
-                        Component.text("\n/bot <名字> attack continuous — 连续攻击（持续）"),
-                        Component.text("\n/bot <名字> use — 单次使用物品"),
-                        Component.text("\n/bot <名字> use continuous — 连续使用物品"),
-                        Component.text("\n/bot <名字> break — 单次挖掘方块"),
-                        Component.text("\n/bot <名字> break continuous — 连续挖掘"),
-                        Component.text("\n/bot <名字> jump — 跳跃一次"),
-                        Component.text("\n/bot <名字> drop — 丢弃主手物品"),
-                        Component.text("\n/bot <名字> swapHands — 交换主副手物品"),
-                        Component.text("\n/bot <名字> mount — 骑乘附近载具"),
-                        Component.text("\n/bot <名字> dismount — 脱离载具"),
-                        Component.text("\n/bot <名字> stop — 停止所有动作和移动"),
-                        Component.text("\n/bot <名字> actionstop <动作名> — 停止指定动作"),
-                        Component.text("\n", NamedTextColor.WHITE),
-                        Component.text("\n§6§l视角与移动", NamedTextColor.GOLD),
-                        Component.text("\n/bot <名字> look north/south/east/west/up/down — 看向指定方向"),
-                        Component.text("\n/bot <名字> look at <坐标> — 看向指定坐标"),
-                        Component.text("\n/bot <名字> turn left/right/back — 转向"),
-                        Component.text("\n/bot <名字> move forward/backward/left/right — 向指定方向持续移动"),
-                        Component.text("\n", NamedTextColor.WHITE),
-                        Component.text("\n§6§l经验系统", NamedTextColor.GOLD),
-                        Component.text("\n（底层只存经验点数，等级实时按Wiki公式换算）"),
-                        Component.text("\n/bot <名字> xp take <点数> — 从假人身上取指定点数经验"),
-                        Component.text("\n/bot <名字> xp level <等级> — 从假人身上取指定等级经验"),
-                        Component.text("\n/bot <名字> xp give <点数> — 将自己指定点数经验给假人"),
-                        Component.text("\n/bot <名字> xp level give <等级> — 将自己指定等级经验给假人"),
-                        Component.text("\n", NamedTextColor.WHITE),
-                        Component.text("\n§6§l配置与设置", NamedTextColor.GOLD),
-                        Component.text("\n/bot <名字> config <配置项> <值> — 修改假人配置"),
-                        Component.text("\n 配置项: skip_sleep(跳过睡眠) always_send_data(始终发送数据)"),
-                        Component.text("\n  spawn_phantom(生成幻翼) keep_inventory(死亡不掉落)"),
-                        Component.text("\n  simulation_distance(模拟距离:-1/4/8/12/16/32)"),
-                        Component.text("\n  tick_type(entity_list/network) enable_locator_bar(定位栏)"),
-                        Component.text("\n", NamedTextColor.WHITE),
-                        Component.text("\n§6§l协作者与权限", NamedTextColor.GOLD),
-                        Component.text("\n/bot <名字> col add <玩家名> — 添加协作者"),
-                        Component.text("\n/bot <名字> col remove <玩家名> — 移除协作者"),
-                        Component.text("\n/bot <名字> col list — 查看当前协作者列表"),
-                        Component.text("\n（GUI权限管理支持15项精细权限控制:背包/末影箱/攻击/使用/"),
-                        Component.text("\n 挖掘/潜行/疾跑/跳跃/丢弃/骑乘/下马/移动/视角/传送/设置)"),
-                        Component.text("\n", NamedTextColor.WHITE),
-                        Component.text("\n§6§l快捷操作", NamedTextColor.GOLD),
-                        Component.text("\n 蹲下+空手右键假人 → 直接打开控制面板"),
-                        Component.text("\n GUI主界面点「+创建假人」→ 聊天栏输入名字即创建"),
-                        Component.text("\n§7提示：名称会自动加BOT_前缀，如 test → BOT_test", NamedTextColor.GRAY)
-                    ));
-                    return 1;
-                }))
+                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("help")
+                        .executes(ctx -> showHelp(ctx, 1))
+                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("page", IntegerArgumentType.integer(1, 3))
+                                .executes(ctx -> showHelp(ctx, IntegerArgumentType.getInteger(ctx, "page")))
+                        )
+                )
                 .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             String input = builder.getRemainingLowerCase();
@@ -166,27 +106,7 @@ public final class PlayerCommand {
                         })
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("spawn")
                                 .executes(PlayerCommand::spawn)
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("at")
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Coordinates>argument("position", Vec3Argument.vec3())
-                                                .executes(PlayerCommand::spawn)
-                                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("facing")
-                                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Coordinates>argument("direction", RotationArgument.rotation())
-                                                                .executes(PlayerCommand::spawn)
-                                                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("in")
-                                                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Identifier>argument("dimension", DimensionArgument.dimension())
-                                                                                .executes(PlayerCommand::spawn)
-                                                                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("in")
-                                                                                        .requires(src -> src.getSender().isOp())
-                                                                                        .then(RequiredArgumentBuilder.<CommandSourceStack, net.minecraft.world.level.GameType>argument("gamemode", GameModeArgument.gameMode())
-                                                                                                .executes(PlayerCommand::spawn)
-                                                                                        )
-                                                                                )
-                                                                        )
-                                                                )
-                                                        )
-                                                )
-                                        )
-                                )
+                        )
                                 .then(LiteralArgumentBuilder.<CommandSourceStack>literal("time")
                                         .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("seconds", IntegerArgumentType.integer(1, 86400))
                                                 .executes(PlayerCommand::spawnDelayed)
@@ -616,10 +536,9 @@ public final class PlayerCommand {
                                                     Component.text("的数据", NamedTextColor.GRAY)
                                             ));
                                              return 1;
-                                         })
-                                )
-                        )
-                );
+                                             })
+                                             )
+                                             );
 
         PaperCommands.INSTANCE.setValid();
         dispatcher.register(command);
@@ -907,6 +826,68 @@ public final class PlayerCommand {
                     });
         }, seconds * 20L);
 
+        return 1;
+    }
+
+    private static int showHelp(CommandContext<CommandSourceStack> ctx, int page) {
+        Component[][] pages = {
+            { Component.text("=== /bot 假人帮助 (1/3) ===", NamedTextColor.GOLD),
+                Component.text("\n", NamedTextColor.WHITE),
+                Component.text("\n§6§l基本操作", NamedTextColor.GOLD),
+                Component.text("\n/bot — 打开假人管理主界面"),
+                Component.text("\n/bot help [页码] — 翻页帮助,共3页"),
+                Component.text("\n/bot <名字> spawn — 在身边召唤假人"),
+                Component.text("\n/bot <名字> menu — 打开控制面板"),
+                Component.text("\n/bot <名字> echest — 打开末影箱"),
+                Component.text("\n/bot <名字> tp — 传送到身边"),
+                Component.text("\n/bot <名字> kill — 杀死假人"),
+                Component.text("\n", NamedTextColor.WHITE),
+                Component.text("\n§6§l动作", NamedTextColor.GOLD),
+                Component.text("\nsneak/unsneak sprint/unsprint"),
+                Component.text("\nattack/use/break [continuous]"),
+                Component.text("\njump drop swapHands mount/dismount"),
+                Component.text("\nstop — 停止所有动作"),
+                Component.text("\nactionstop <动作> — 停止指定动作"),
+            },
+            { Component.text("=== /bot 假人帮助 (2/3) ===", NamedTextColor.GOLD),
+                Component.text("\n", NamedTextColor.WHITE),
+                Component.text("\n§6§l视角与移动", NamedTextColor.GOLD),
+                Component.text("\nlook north/south/east/west/up/down"),
+                Component.text("\nlook at <坐标> — 看向坐标"),
+                Component.text("\nturn left/right/back — 转向"),
+                Component.text("\nmove forward/backward/left/right"),
+                Component.text("\n", NamedTextColor.WHITE),
+                Component.text("\n§6§l经验（只存点数，等级实时推算）", NamedTextColor.GOLD),
+                Component.text("\nxp take <点数> — 取经验点数"),
+                Component.text("\nxp level <等级> — 取经验等级"),
+                Component.text("\nxp give <点数> — 给假人经验点"),
+                Component.text("\nxp level give <等级> — 给假人经验等级"),
+                Component.text("\n", NamedTextColor.WHITE),
+                Component.text("\n§6§l设置", NamedTextColor.GOLD),
+                Component.text("\nconfig <项> <值>"),
+                Component.text("\n skip_sleep always_send_data"),
+                Component.text("\n spawn_phantom keep_inventory"),
+                Component.text("\n simulation_distance tick_type"),
+            },
+            { Component.text("=== /bot 假人帮助 (3/3) ===", NamedTextColor.GOLD),
+                Component.text("\n", NamedTextColor.WHITE),
+                Component.text("\n§6§l协作者与权限", NamedTextColor.GOLD),
+                Component.text("\ncol add <玩家> — 添加协作者"),
+                Component.text("\ncol remove <玩家> — 移除协作者"),
+                Component.text("\ncol list — 查看协作者"),
+                Component.text("\nGUI支持15项精细权限"),
+                Component.text("\n", NamedTextColor.WHITE),
+                Component.text("\n§6§l快捷操作", NamedTextColor.GOLD),
+                Component.text("\n蹲下+空手右键 → 控制面板"),
+                Component.text("\n「+创建假人」→ 聊天输名字"),
+                Component.text("\n", NamedTextColor.WHITE),
+                Component.text("\n§7自动加BOT_前缀: test→BOT_test"),
+                Component.text("\n§7每人上限5个,OP无限制"),
+                Component.text("\n§7/bot help 1/2/3 翻页", NamedTextColor.GRAY),
+            },
+        };
+        int idx = Math.max(0, Math.min(page - 1, pages.length - 1));
+        ctx.getSource().getSender().sendMessage(join(spaces(), pages[idx]));
         return 1;
     }
 
