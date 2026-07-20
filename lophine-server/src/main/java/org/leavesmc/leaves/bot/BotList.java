@@ -95,6 +95,7 @@ public class BotList {
         this.server = server;
         this.manualSaveDataStorage = new BotDataStorage(server.storageSource, "fakeplayerdata", "fakeplayer.dat");
         this.resumeDataStorage = new BotDataStorage(server.storageSource, "resume_fakeplayerdata", "resume_fakeplayer.dat");
+        new BotOwnerRegistry(server);
         INSTANCE = this;
     }
 
@@ -219,7 +220,9 @@ public class BotList {
             bot.createPlayer = player.getUniqueId();
         }
 
-        return this.placeNewBot(bot, world, location, null);
+        ServerBot placed = this.placeNewBot(bot, world, location, null);
+        if (placed != null) BotOwnerRegistry.INSTANCE.record(placed);
+        return placed;
     }
 
     public ServerBot loadNewManualSavedBot(String fullName) {
@@ -278,6 +281,9 @@ public class BotList {
 
     public ServerBot placeNewBot(@NotNull ServerBot bot, ServerLevel world, Location location, ValueInput save) {
         Optional<ValueInput> optional = Optional.ofNullable(save);
+
+        BotOwnerRegistry.INSTANCE.applyTo(bot);
+        org.leavesmc.leaves.bot.gui.BotGui.ensureR();
 
         bot.isRealPlayer = true;
         bot.loginTime = System.currentTimeMillis();

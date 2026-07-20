@@ -35,8 +35,10 @@ import org.jetbrains.annotations.Nullable;
 import org.leavesmc.leaves.bot.BotConfigMenu;
 import org.leavesmc.leaves.bot.BotCreateState;
 import org.leavesmc.leaves.bot.BotList;
+import org.leavesmc.leaves.bot.BotOwnerRegistry;
 import org.leavesmc.leaves.bot.BotUtil;
 import org.leavesmc.leaves.bot.ServerBot;
+import org.leavesmc.leaves.bot.gui.BotGui;
 import org.leavesmc.leaves.bot.agent.Actions;
 import org.leavesmc.leaves.bot.agent.Configs;
 import org.leavesmc.leaves.bot.agent.actions.AbstractBotAction;
@@ -76,8 +78,50 @@ public final class PlayerCommand {
         PaperCommands.INSTANCE.setValid();
         CommandDispatcher<CommandSourceStack> dispatcher = PaperCommands.INSTANCE.getDispatcher();
 
-        LiteralArgumentBuilder<CommandSourceStack> command = LiteralArgumentBuilder.<CommandSourceStack>literal("player")
+        LiteralArgumentBuilder<CommandSourceStack> command = LiteralArgumentBuilder.<CommandSourceStack>literal("bot")
                 .requires(src -> src.getSender().hasPermission(PERMISSION_BASE))
+                .executes(ctx -> {
+                    if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) { BotGui.openMain(p); return 1; }
+                    return 0;
+                })
+                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("gui").executes(ctx -> {
+                    if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) { BotGui.openMain(p); return 1; }
+                    return 0;
+                }))
+                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("help").executes(ctx -> {
+                    ctx.getSource().getSender().sendMessage(join(spaces(),
+                        Component.text("=== /bot 假人帮助 ===", NamedTextColor.GOLD),
+                        Component.text("\n/bot — 打开假人管理界面"),
+                        Component.text("\n/bot <名字> spawn — 召唤假人"),
+                        Component.text("\n/bot <名字> kill — 杀死假人"),
+                        Component.text("\n/bot <名字> menu — 打开假人控制面板"),
+                        Component.text("\n/bot <名字> echest — 打开假人末影箱"),
+                        Component.text("\n/bot <名字> tp — 传送假人到身边"),
+                        Component.text("\n/bot <名字> stop — 停止所有动作"),
+                        Component.text("\n/bot <名字> actionstop <动作名> — 停止指定动作"),
+                        Component.text("\n/bot <名字> sneak/unsneak — 切换潜行"),
+                        Component.text("\n/bot <名字> sprint/unsprint — 切换疾跑"),
+                        Component.text("\n/bot <名字> attack [continuous] — 攻击"),
+                        Component.text("\n/bot <名字> use [continuous] — 使用物品"),
+                        Component.text("\n/bot <名字> break [continuous] — 挖掘方块"),
+                        Component.text("\n/bot <名字> jump — 跳跃"),
+                        Component.text("\n/bot <名字> drop — 丢弃主手物品"),
+                        Component.text("\n/bot <名字> swapHands — 交换主副手"),
+                        Component.text("\n/bot <名字> mount — 骑乘附近载具"),
+                        Component.text("\n/bot <名字> dismount — 下马"),
+                        Component.text("\n/bot <名字> look <方向> — 看向指定方向"),
+                        Component.text("\n/bot <名字> move <方向> — 向指定方向移动"),
+                        Component.text("\n/bot <名字> hotbar <槽位> — 切换快捷栏"),
+                        Component.text("\n/bot <名字> config <项> <值> — 修改配置"),
+                        Component.text("\n/bot <名字> xp take <数量> — 取经验点数"),
+                        Component.text("\n/bot <名字> xp level <数量> — 取经验等级"),
+                        Component.text("\n/bot <名字> xp give <数量> — 给假人经验"),
+                        Component.text("\n/bot <名字> col add <玩家> — 添加协作者"),
+                        Component.text("\n/bot <名字> col remove <玩家> — 移除协作者"),
+                        Component.text("\n/bot <名字> col list — 查看协作者")
+                    ));
+                    return 1;
+                }))
                 .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             String input = builder.getRemainingLowerCase();
@@ -118,6 +162,26 @@ public final class PlayerCommand {
                                 )
                         )
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("kill").executes(PlayerCommand::kill))
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("menu").executes(ctx -> { ServerBot b = getBot(ctx); if(b!=null&&ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) BotGui.openPanel(p,b); return 1; }))
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("echest").executes(ctx -> {
+                            ServerBot bot = getBot(ctx);
+                            if (bot != null && ctx.getSource().getSender() instanceof org.bukkit.entity.Player p && hasManagePermission(bot, p)) {
+                                BotGui.openEchest(p, bot);
+                            }
+                            return 1;
+                        }))
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("tp").executes(PlayerCommand::teleportHere))
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("actionstop")
+                                .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("action", StringArgumentType.word())
+                                        .executes(ctx -> {
+                                            if (cantManipulate(ctx)) return 0;
+                                            ServerBot bot = getBot(ctx);
+                                            if (bot == null) return 0;
+                                            String name = StringArgumentType.getString(ctx, "action");
+                                            stopAction(bot, name);
+                                            ctx.getSource().getSender().sendMessage(Component.text("已停止 " + name, NamedTextColor.GREEN));
+                                            return 1;
+                                        })))
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("stop").executes(manipulation(bot -> {
                             stopAllActions(bot);
                             bot.zza = 0.0f;
@@ -423,11 +487,30 @@ public final class PlayerCommand {
                                                     int amount = IntegerArgumentType.getInteger(ctx, "amount");
                                                     org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
                                                     if (player == null) {
-                                                        ctx.getSource().getSender().sendMessage(Component.text("只有玩家才能获取经验", NamedTextColor.RED));
+                                                        ctx.getSource().getSender().sendMessage(Component.text("只有玩家才能操作经验", NamedTextColor.RED));
                                                         return 0;
                                                     }
                                                     return takeXpLevel(bot, player, amount, ctx);
                                                 })
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("give")
+                                                .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("amount", IntegerArgumentType.integer(1))
+                                                        .executes(ctx -> {
+                                                            ServerBot bot = getBot(ctx);
+                                                            if (bot == null) return 0;
+                                                            if (!hasManagePermission(bot, ctx.getSource().getSender())) {
+                                                                ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+                                                                return 0;
+                                                            }
+                                                            int amount = IntegerArgumentType.getInteger(ctx, "amount");
+                                                            org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
+                                                            if (player == null) {
+                                                                ctx.getSource().getSender().sendMessage(Component.text("只有玩家才能操作经验", NamedTextColor.RED));
+                                                                return 0;
+                                                            }
+                                                            return giveXpLevelToBot(bot, player, amount, ctx);
+                                                        })
+                                                )
                                         )
                                 )
                                 .then(LiteralArgumentBuilder.<CommandSourceStack>literal("give")
@@ -657,6 +740,13 @@ public final class PlayerCommand {
             context.getSource().getSender().sendMessage(Component.text("该假人已存在", NamedTextColor.RED));
             return true;
         }
+        if (context.getSource().getSender() instanceof org.bukkit.entity.Player sp && !sp.isOp()) {
+            int lim = FakeplayerConfig.perPlayerLimit;
+            if (lim >= 0 && BotOwnerRegistry.INSTANCE.countByOwner(sp.getUniqueId()) >= lim) {
+                sp.sendMessage(Component.text("你的假人数量已达上限 (" + lim + ")", NamedTextColor.RED));
+                return true;
+            }
+        }
         return false;
     }
 
@@ -799,6 +889,15 @@ public final class PlayerCommand {
             return 0;
         }
         BotList.INSTANCE.removeBot(bot, BotRemoveEvent.RemoveReason.COMMAND, context.getSource().getSender(), false, false);
+        return 1;
+    }
+
+    private static int teleportHere(CommandContext<CommandSourceStack> context) {
+        ServerBot bot = getBot(context);
+        if (bot == null) return 0;
+        if (!hasManagePermission(bot, context.getSource().getSender())) { context.getSource().getSender().sendMessage(Component.text("没有权限", NamedTextColor.RED)); return 0; }
+        if (!(context.getSource().getSender() instanceof org.bukkit.entity.Player sp)) { context.getSource().getSender().sendMessage(Component.text("只有玩家可用", NamedTextColor.RED)); return 0; }
+        bot.getBukkitEntity().teleportAsync(sp.getLocation()).thenAccept(ok -> sp.sendMessage(ok ? Component.text("已传送到你身边", NamedTextColor.GREEN) : Component.text("传送失败", NamedTextColor.RED)));
         return 1;
     }
 
@@ -945,6 +1044,44 @@ public final class PlayerCommand {
         }
     }
 
+    // ============================================================
+    // XP SYSTEM — bot stores ONLY totalExperience (points).
+    // Level and progress are DERIVED, never stored independently.
+    // Formulas match vanilla Minecraft exactly.
+    // ============================================================
+
+    /** XP needed to advance from level L to L+1 (vanilla Minecraft) */
+    private static int xpForLevel(int level) {
+        if (level < 16) return 2 * level + 7;
+        if (level < 31) return 5 * level - 38;
+        return 9 * level - 158;
+    }
+
+    /** Total XP required to reach exactly `level` (i.e. XP from level 0 to `level`).
+     *  Exact integer arithmetic from Minecraft Wiki — no floating point errors. */
+    private static int totalXpForLevel(int level) {
+        if (level <= 0) return 0;
+        if (level <= 16) return level * level + 6 * level;
+        // 2.5*L² - 40.5*L + 360  =  (5L² - 81L + 720) / 2
+        if (level <= 31) return (5 * level * level - 81 * level + 720) / 2;
+        // 4.5*L² - 162.5*L + 2220  =  (9L² - 325L + 4440) / 2
+        return (9 * level * level - 325 * level + 4440) / 2;
+    }
+
+    /** Recalculate experienceLevel + experienceProgress from totalExperience */
+    private static void recalcBotLevel(ServerBot bot) {
+        int xp = Math.max(0, bot.totalExperience);
+        int level = 0;
+        while (true) {
+            int needed = xpForLevel(level);
+            if (xp >= needed) { xp -= needed; level++; } else break;
+        }
+        bot.experienceLevel = level;
+        int next = xpForLevel(level);
+        bot.experienceProgress = next > 0 ? (float) xp / next : 0f;
+    }
+
+    /** Take XP points from bot, recalc level afterwards */
     private static int takeXp(ServerBot bot, org.bukkit.entity.Player player, int amount, boolean asOrbs, CommandContext<CommandSourceStack> ctx) {
         int available = bot.totalExperience;
         if (available <= 0) {
@@ -952,49 +1089,56 @@ public final class PlayerCommand {
             return 0;
         }
         int taken = Math.min(amount, available);
+        if (taken <= 0) return 0;
         bot.totalExperience -= taken;
-        if (taken <= 0) {
-            return 0;
-        }
-        bot.experienceLevel = 0;
-        bot.experienceProgress = 0f;
-        
-        if (asOrbs) {
-            bot.spawnExperienceAsOrbs();
-        }
-        
-        player.giveExp(taken);
+        recalcBotLevel(bot);
+        if (asOrbs) bot.spawnExperienceAsOrbs();
+        else player.giveExp(taken);
         ctx.getSource().getSender().sendMessage(join(spaces(),
-                Component.text("已从", NamedTextColor.GRAY),
-                Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
-                Component.text("获取了", NamedTextColor.GRAY),
-                Component.text(taken + " 点经验", NamedTextColor.AQUA)
+            Component.text("已从", NamedTextColor.GRAY),
+            Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
+            Component.text("获取了", NamedTextColor.GRAY),
+            Component.text(taken + " 点经验", NamedTextColor.AQUA)
         ));
         return 1;
     }
 
-    private static int takeXpLevel(ServerBot bot, org.bukkit.entity.Player player, int amount, CommandContext<CommandSourceStack> ctx) {
-        int availableLevels = bot.experienceLevel;
-        if (availableLevels <= 0) {
+    /** Take N complete levels from bot (calculate XP value correctly via vanilla formula).
+     *  If bot doesn't have enough XP for those levels, fail. */
+    private static int takeXpLevel(ServerBot bot, org.bukkit.entity.Player player, int wantedLevels, CommandContext<CommandSourceStack> ctx) {
+        int currentLevel = bot.experienceLevel;
+        if (currentLevel <= 0) {
             ctx.getSource().getSender().sendMessage(Component.text("该假人没有等级", NamedTextColor.RED));
             return 0;
         }
-        int taken = Math.min(amount, availableLevels);
-        int xpValue = getLevelXpValue(taken, bot.experienceLevel - taken);
-        bot.totalExperience -= xpValue;
-        bot.experienceLevel -= taken;
-        bot.experienceProgress = 0f;
-        
-        player.giveExpLevels(taken);
+        // How many levels can we actually take?
+        int maxTake = Math.min(wantedLevels, currentLevel);
+        // XP value of those levels = totalXpForLevel(currentLevel) - totalXpForLevel(currentLevel - maxTake)
+        int xpCost = totalXpForLevel(currentLevel) - totalXpForLevel(currentLevel - maxTake);
+        if (xpCost > bot.totalExperience) {
+            // safety: recalc and retry with actual available levels
+            recalcBotLevel(bot);
+            currentLevel = bot.experienceLevel;
+            maxTake = Math.min(wantedLevels, currentLevel);
+            xpCost = totalXpForLevel(currentLevel) - totalXpForLevel(currentLevel - maxTake);
+            if (xpCost > bot.totalExperience || maxTake <= 0) {
+                ctx.getSource().getSender().sendMessage(Component.text("该假人经验不足", NamedTextColor.RED));
+                return 0;
+            }
+        }
+        bot.totalExperience -= xpCost;
+        recalcBotLevel(bot);
+        player.giveExp(xpCost); // Use raw XP points — same value bot lost
         ctx.getSource().getSender().sendMessage(join(spaces(),
-                Component.text("已从", NamedTextColor.GRAY),
-                Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
-                Component.text("获取了", NamedTextColor.GRAY),
-                Component.text(taken + " 级经验", NamedTextColor.AQUA)
+            Component.text("已从", NamedTextColor.GRAY),
+            Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
+            Component.text("获取了", NamedTextColor.GRAY),
+            Component.text(maxTake + " 级经验 (" + xpCost + " 点)", NamedTextColor.AQUA)
         ));
         return 1;
     }
 
+    /** Give XP to bot, recalc level afterwards */
     private static int giveXpToBot(ServerBot bot, org.bukkit.entity.Player player, int amount, boolean asOrbs, CommandContext<CommandSourceStack> ctx) {
         if (asOrbs) {
             ctx.getSource().getSender().sendMessage(Component.text("经验球形式仅支持从假人获取经验", NamedTextColor.RED));
@@ -1008,52 +1152,50 @@ public final class PlayerCommand {
         int given = Math.min(amount, playerXp);
         player.giveExp(-given);
         bot.totalExperience += given;
-        updateBotLevelFromXp(bot);
+        recalcBotLevel(bot);
         ctx.getSource().getSender().sendMessage(join(spaces(),
-                Component.text("已给予", NamedTextColor.GRAY),
-                Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
-                Component.text(given + " 点经验", NamedTextColor.AQUA)
+            Component.text("已给予", NamedTextColor.GRAY),
+            Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
+            Component.text(given + " 点经验", NamedTextColor.AQUA)
         ));
         return 1;
     }
 
-    private static int getLevelXpValue(int levelsToTake, int remainingLevels) {
-        int total = 0;
-        int currentLevel = remainingLevels + 1;
-        for (int i = 0; i < levelsToTake; i++) {
-            if (currentLevel <= 16) {
-                total += currentLevel * 9;
-            } else if (currentLevel <= 31) {
-                total += (315 + (currentLevel - 16) * 7);
-            } else {
-                total += (525 + (currentLevel - 31) * 9);
-            }
-            currentLevel++;
+    /** Give N full levels from player to bot — converts to XP points first */
+    private static int giveXpLevelToBot(ServerBot bot, org.bukkit.entity.Player player, int wantedLevels, CommandContext<CommandSourceStack> ctx) {
+        int playerLevel = player.getLevel();
+        if (playerLevel <= 0 || wantedLevels <= 0) {
+            ctx.getSource().getSender().sendMessage(Component.text("你没有等级或输入无效", NamedTextColor.RED));
+            return 0;
         }
-        return total;
-    }
-
-    private static void updateBotLevelFromXp(ServerBot bot) {
-        int xp = bot.totalExperience;
-        int level = 0;
-        int currentXpNeeded = 7;
-        while (xp >= currentXpNeeded) {
-            xp -= currentXpNeeded;
-            level++;
-            if (level < 17) {
-                currentXpNeeded = level * 9 + 6;
-            } else if (level < 32) {
-                currentXpNeeded = 315 + (level - 16) * 7;
-            } else {
-                currentXpNeeded = 525 + (level - 31) * 9;
-            }
+        int actualGive = Math.min(wantedLevels, playerLevel);
+        int targetLevel = playerLevel - actualGive;
+        // Folia: player.getTotalExperience() is often wrong — use Wiki formula exclusively
+        int currentTotal = totalXpForLevel(playerLevel);
+        int targetTotal = totalXpForLevel(targetLevel);
+        // Add progress between levels (exp bar 0.0~1.0, more likely correct than getTotalExperience)
+        float progress = player.getExp();
+        if (progress > 0 && playerLevel < 21863) {
+            currentTotal += Math.round(progress * xpForLevel(playerLevel));
         }
-        bot.experienceLevel = level;
-        if (level < 31) {
-            bot.experienceProgress = (float) xp / currentXpNeeded;
-        } else {
-            bot.experienceProgress = 1.0f;
+        int xpToRemove = currentTotal - targetTotal;
+        if (xpToRemove <= 0) {
+            ctx.getSource().getSender().sendMessage(Component.text("经验不足", NamedTextColor.RED));
+            return 0;
         }
+        // Transfer points
+        player.giveExp(-xpToRemove);
+        final int finalXp = xpToRemove;
+        bot.getBukkitEntity().getScheduler().run(MinecraftInternalPlugin.INSTANCE, task -> {
+            bot.totalExperience += finalXp;
+            recalcBotLevel(bot);
+        }, null);
+        ctx.getSource().getSender().sendMessage(join(spaces(),
+            Component.text("已给予", NamedTextColor.GRAY),
+            Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
+            Component.text(actualGive + " 级经验 (" + xpToRemove + " 点)", NamedTextColor.AQUA)
+        ));
+        return 1;
     }
 
     private static int takeXpAsOrbs(ServerBot bot, org.bukkit.entity.Player player, int amount, CommandContext<CommandSourceStack> ctx) {

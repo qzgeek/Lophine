@@ -43,11 +43,16 @@ public class FakeplayerConfig implements IConfigModule {
 
     @ConfigInfo(name = "resident-fakeplayer", comments = """
             Allow fakeplayers to persist across restarts""")
-    public static boolean canResident = false;
+    public static boolean canResident = true;
 
     @ConfigInfo(name = "open-fakeplayer-inventory", comments = """
             Allow opening fakeplayer inventory""")
-    public static boolean canOpenInventory = false;
+    public static boolean canOpenInventory = true;
+
+    @ConfigInfo(name = "respawn-on-death", comments = """
+            Auto-respawn fakeplayers at their spawn point when they die.
+            If false, the bot is removed from the server on death.""")
+    public static boolean respawnOnDeath = true;
 
     @ConfigInfo(name = "use-action", comments = """
             Allow fakeplayers to use actions""")
@@ -55,11 +60,23 @@ public class FakeplayerConfig implements IConfigModule {
 
     @ConfigInfo(name = "modify-config", comments = """
             Allow modifying fakeplayer config""")
-    public static boolean canModifyConfig = false;
+    public static boolean canModifyConfig = true;
+
+    @ConfigInfo(name = "per-player-limit", comments = """
+            Maximum fakeplayers per non-OP player (-1 unlimited)""")
+    public static int perPlayerLimit = 5;
+
+    @ConfigInfo(name = "enable-gui", comments = """
+            Enable doll-style GUI""")
+    public static boolean guiEnabled = true;
+
+    @ConfigInfo(name = "shortcut-enabled", comments = """
+            Sneak + right-click bot opens GUI panel""")
+    public static boolean shortcutEnabled = true;
 
     @ConfigInfo(name = "manual-save-and-load", comments = """
             Allow manual save and load of fakeplayers""")
-    public static boolean canManualSaveAndLoad = false;
+    public static boolean canManualSaveAndLoad = true;
 
     @ConfigInfo(name = "cache-skin", comments = """
             Use skin cache for fakeplayers""")

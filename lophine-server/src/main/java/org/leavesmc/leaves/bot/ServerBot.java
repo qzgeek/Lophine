@@ -361,7 +361,10 @@ public class ServerBot extends ServerPlayer {
     }
 
     @Override
-    public @NotNull InteractionResult interact(@NotNull Player player, @NotNull InteractionHand hand, @NotNull net.minecraft.world.phys.Vec3 location) { // Leaves - Paper 26.1: Entity#interact now takes Vec3
+    public @NotNull InteractionResult interact(@NotNull Player player, @NotNull InteractionHand hand, @NotNull net.minecraft.world.phys.Vec3 location) {
+        if (player.isShiftKeyDown() && player.getMainHandItem().isEmpty()) {
+            return InteractionResult.PASS; // GUI handles this on the Bukkit event layer
+        }
         if (FakePlayerCompatConfig.openFakePlayerInventory) {
             if (player instanceof ServerPlayer player1 && player.getMainHandItem().isEmpty()) {
                 if (player1.getBukkitEntity().isOp()) {

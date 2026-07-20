@@ -25,7 +25,7 @@ public class FakePlayerCompatConfig implements IConfigModule {
 
     @ConfigInfo(name = "fakePlayerResident", comments = """
             Keep fakeplayers resident across unload and restart.""")
-    public static boolean fakePlayerResident = false;
+    public static boolean fakePlayerResident = true;
 
     @ConfigInfo(name = "openFakePlayerInventory", comments = """
             Allow opening fakeplayer inventories.""")
