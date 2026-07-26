@@ -411,7 +411,7 @@ public final class BotGui implements Listener {
             case"settings"->openSettings(p,bot,0);
             case"perm"->openPermMgmt(p,bot,0);
             case"xp"->openXP(p,bot);
-            case"tp"->{p.closeInventory();p.performCommand("bot "+fn+" tp");}
+            case"tp"->{p.closeInventory();p.performCommand("bot tp "+fn);}
             case"rm"->openConfirmRemove(p,bot);
             case"remove_ok"->{p.closeInventory();BotList.INSTANCE.removeBotPermanently(bot,p);}
             case"give"->{p.closeInventory();AWAIT_GIVE.add(p.getUniqueId());p.sendMessage(t("聊天栏输入目标玩家名转让",NamedTextColor.GREEN));}
@@ -455,10 +455,10 @@ public final class BotGui implements Listener {
         if(AWAIT_XP.containsKey(uid)){e.setCancelled(true);String fn=AWAIT_XP.remove(uid);
             try{int amt=Integer.parseInt(e.getMessage().trim());int pg=XP_PAGE.getOrDefault(uid,0);
                 p.getScheduler().run(MinecraftInternalPlugin.INSTANCE,task->{
-                    if(pg==0)p.performCommand("bot "+fn+" xp level "+amt);        // take level
-                    else if(pg==1)p.performCommand("bot "+fn+" xp take "+amt);     // take points
-                    else if(pg==2)p.performCommand("bot "+fn+" xp level give "+amt); // give level
-                    else p.performCommand("bot "+fn+" xp give "+amt);              // give points
+                    if(pg==0)p.performCommand("bot xp level "+fn+" "+amt);        // take level
+                    else if(pg==1)p.performCommand("bot xp take "+fn+" "+amt);     // take points
+                    else if(pg==2)p.performCommand("bot xp level give "+fn+" "+amt); // give level
+                    else p.performCommand("bot xp give "+fn+" "+amt);              // give points
                     String action=pg<2?"获取":"给予";String unit=pg%2==0?"级":"点";
                     p.sendMessage(t("已"+action+amt+unit+"经验",NamedTextColor.GREEN));
                     ServerBot b=BotList.INSTANCE.getBotByName(fn.toLowerCase(Locale.ROOT));if(b!=null)openXP(p,b,pg);
@@ -493,17 +493,17 @@ public final class BotGui implements Listener {
 
     // --- helper methods ---
     private static void handleXp(Player p,ServerBot bot,String arg){
-        String fn=bot.getScoreboardName(); int pg=XP_PAGE.getOrDefault(p.getUniqueId(),0);
+        String fn=botCmdName(bot); int pg=XP_PAGE.getOrDefault(p.getUniqueId(),0);
         if("custom".equals(arg)||"give_lv:custom".equals(arg)||"give:custom".equals(arg)){
             AWAIT_XP.put(p.getUniqueId(),fn);p.closeInventory();
             String hint = switch(pg){case 0->"输入要获取的经验等级";case 1->"输入要获取的经验点数";case 2->"输入要给假人的经验等级";default->"输入要给假人的经验点数";};
             p.sendMessage(t(hint,NamedTextColor.GREEN));return;
         }
         // Determine action type from argument prefix
-        if(arg.startsWith("give_lv:")){String amt=arg.substring(8);p.performCommand("bot "+fn+" xp level give "+amt);}  // give levels (custom command)
-        else if(arg.startsWith("give:")){String amt=arg.substring(5);p.performCommand("bot "+fn+" xp give "+amt);}
-        else if(pg==0){p.performCommand("bot "+fn+" xp level "+arg);}   // take level
-        else{p.performCommand("bot "+fn+" xp take "+arg);}               // take points
+        if(arg.startsWith("give_lv:")){String amt=arg.substring(8);p.performCommand("bot xp level give "+fn+" "+amt);}  // give levels (custom command)
+        else if(arg.startsWith("give:")){String amt=arg.substring(5);p.performCommand("bot xp give "+fn+" "+amt);}
+        else if(pg==0){p.performCommand("bot xp level "+fn+" "+arg);}   // take level
+        else{p.performCommand("bot xp take "+fn+" "+arg);}               // take points
         p.getScheduler().runDelayed(MinecraftInternalPlugin.INSTANCE,task->{ServerBot b=BotList.INSTANCE.getBotByName(fn.toLowerCase(Locale.ROOT));if(b!=null)openXP(p,b,pg);},null,2L);
     }
     private static void hGSet(Player p,ServerBot bot,String flag){
@@ -535,30 +535,30 @@ public final class BotGui implements Listener {
         String nv;if("simulation_distance".equals(cn)){Object cv=bot.getConfigValue(Configs.SIMULATION_DISTANCE);int cur=cv instanceof Integer i?i:-1;nv=switch(cur){case 4->"8";case 8->"12";case 12->"16";case 16->"32";case 32->"-1";default->"4";};}
         else if("tick_type".equals(cn)){nv="NETWORK".equals(String.valueOf(bot.getConfigValue(Configs.TICK_TYPE)))?"entity_list":"network";}
         else{AbstractBotConfig<?,?>c=Configs.getConfig(cn);if(c==null)return;boolean on=bot.getConfigValue(c)instanceof Boolean b&&b;nv=on?"false":"true";}
-        p.performCommand("bot "+bot.getScoreboardName()+" config "+cn+" "+nv);
+        p.performCommand("bot config "+botCmdName(bot)+" "+cn+" "+nv);
     }
     private static void hAct(Player p,ServerBot bot,String act){
-        String fn=bot.getScoreboardName();
+        String fn=botCmdName(bot);
         switch(act){
-            case"sneak"->p.performCommand("bot "+fn+" "+(bot.isShiftKeyDown()?"unsneak":"sneak"));
-            case"sprint"->p.performCommand("bot "+fn+" "+(bot.isSprinting()?"unsprint":"sprint"));
-            case"attack_once"->p.performCommand("bot "+fn+" attack");
-            case"attack_cont"->p.performCommand("bot "+fn+" "+(hasA(bot,"attack")?"actionstop attack":"attack continuous"));
-            case"use_once"->p.performCommand("bot "+fn+" use");
-            case"use_cont"->p.performCommand("bot "+fn+" "+(hasA(bot,"use_auto")?"actionstop use_auto":"use continuous"));
-            case"break_once"->p.performCommand("bot "+fn+" break");
-            case"break_cont"->p.performCommand("bot "+fn+" "+(hasA(bot,"break")?"actionstop break":"break continuous"));
-            case"jump"->p.performCommand("bot "+fn+" jump");
-            case"drop"->p.performCommand("bot "+fn+" drop");
-            case"swap"->p.performCommand("bot "+fn+" swapHands");
-            case"mount"->p.performCommand("bot "+fn+" mount");
-            case"dismount"->p.performCommand("bot "+fn+" dismount");
-            case"stopall"->p.performCommand("bot "+fn+" stop");
-            case"look_n"->p.performCommand("bot "+fn+" look north");case"look_s"->p.performCommand("bot "+fn+" look south");
-            case"look_e"->p.performCommand("bot "+fn+" look east");case"look_w"->p.performCommand("bot "+fn+" look west");
-            case"look_u"->p.performCommand("bot "+fn+" look up");case"look_d"->p.performCommand("bot "+fn+" look down");
-            case"move_f"->p.performCommand("bot "+fn+" move forward");case"move_b"->p.performCommand("bot "+fn+" move backward");
-            case"move_l"->p.performCommand("bot "+fn+" move left");case"move_r"->p.performCommand("bot "+fn+" move right");
+            case"sneak"->p.performCommand("bot "+(bot.isShiftKeyDown()?"unsneak":"sneak")+" "+fn);
+            case"sprint"->p.performCommand("bot "+(bot.isSprinting()?"unsprint":"sprint")+" "+fn);
+            case"attack_once"->p.performCommand("bot attack "+fn);
+            case"attack_cont"->p.performCommand("bot "+(hasA(bot,"attack")?"actionstop attack":"attack continuous")+" "+fn);
+            case"use_once"->p.performCommand("bot use "+fn);
+            case"use_cont"->p.performCommand("bot "+(hasA(bot,"use_auto")?"actionstop use_auto":"use continuous")+" "+fn);
+            case"break_once"->p.performCommand("bot break "+fn);
+            case"break_cont"->p.performCommand("bot "+(hasA(bot,"break")?"actionstop break":"break continuous")+" "+fn);
+            case"jump"->p.performCommand("bot jump "+fn);
+            case"drop"->p.performCommand("bot drop "+fn);
+            case"swap"->p.performCommand("bot swapHands "+fn);
+            case"mount"->p.performCommand("bot mount "+fn);
+            case"dismount"->p.performCommand("bot dismount "+fn);
+            case"stopall"->p.performCommand("bot stop "+fn);
+            case"look_n"->p.performCommand("bot look north "+fn);case"look_s"->p.performCommand("bot look south "+fn);
+            case"look_e"->p.performCommand("bot look east "+fn);case"look_w"->p.performCommand("bot look west "+fn);
+            case"look_u"->p.performCommand("bot look up "+fn);case"look_d"->p.performCommand("bot look down "+fn);
+            case"move_f"->p.performCommand("bot move forward "+fn);case"move_b"->p.performCommand("bot move backward "+fn);
+            case"move_l"->p.performCommand("bot move left "+fn);case"move_r"->p.performCommand("bot move right "+fn);
             default->{}
         }
     }
