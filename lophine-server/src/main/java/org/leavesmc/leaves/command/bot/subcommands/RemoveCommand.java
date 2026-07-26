@@ -78,7 +78,8 @@ public class RemoveCommand extends BotSubcommand {
         @Override
         protected boolean execute(@NotNull CommandContext context) {
             ServerBot bot = context.getArgument(BotArgument.class);
-            return removeBot(bot, context.getSender());
+            BotList.INSTANCE.removeBotPermanently(bot, context.getSender());
+            return true;
         }
     }
 
