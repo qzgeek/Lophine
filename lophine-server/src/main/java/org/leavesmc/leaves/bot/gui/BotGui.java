@@ -374,9 +374,9 @@ public final class BotGui implements Listener {
         if(e.getClickedInventory()!=e.getView().getTopInventory())return;
         String act=actOf(e.getCurrentItem());if(act==null||"noop".equals(act))return;
         // Global navigation
-        if("close".equals(act)){p.closeInventory();return;}
+        if("close".equals(act)){XP_PAGE.remove(p.getUniqueId());p.closeInventory();return;}
         if("create".equals(act)){p.closeInventory();AWAIT_NAME.add(p.getUniqueId());p.sendMessage(t("在聊天栏输入假人名字(4-16位字母数字下划线)",NamedTextColor.GREEN));return;}
-        if("back_main".equals(act)){COLLAB_IS_PICKER.remove(p.getUniqueId());openMain(p);return;}
+        if("back_main".equals(act)){COLLAB_IS_PICKER.remove(p.getUniqueId());XP_PAGE.remove(p.getUniqueId());openMain(p);return;}
         // Page navigation
         if(act.startsWith("page:")){int pg=Integer.parseInt(act.substring(5));
             ServerBot b=resolveBot(h);
@@ -396,9 +396,9 @@ public final class BotGui implements Listener {
             }return;
         }
         // Back to panel
-        if("back_panel".equals(act)){COLLAB_IS_PICKER.remove(p.getUniqueId());ServerBot b=resolveBot(h);if(b!=null)openPanel(p,b);else openMain(p);return;}
+        if("back_panel".equals(act)){COLLAB_IS_PICKER.remove(p.getUniqueId());XP_PAGE.remove(p.getUniqueId());ServerBot b=resolveBot(h);if(b!=null)openPanel(p,b);else openMain(p);return;}
         // Spawn / panel
-        if(act.startsWith("spawn:")){p.closeInventory();p.performCommand("bot "+act.substring(6)+" spawn");return;}
+        if(act.startsWith("spawn:")){p.closeInventory();p.performCommand("bot spawn "+act.substring(6));return;}
         if(act.startsWith("panel:")){ServerBot b=BotList.INSTANCE.getBotByName(act.substring(6).toLowerCase(Locale.ROOT));if(b!=null)openPanel(p,b);else openMain(p);return;}
         // Bot-specific actions
         String fn=h.getBotFullName();if(fn==null)return;
@@ -446,7 +446,7 @@ public final class BotGui implements Listener {
         Player p=e.getPlayer();UUID uid=p.getUniqueId();
         if(AWAIT_NAME.remove(uid)){e.setCancelled(true);String name=e.getMessage().trim();
             if(!name.matches("^[a-zA-Z0-9_]{4,16}$")){p.sendMessage(t("名称不合法",NamedTextColor.RED));return;}
-            p.getScheduler().run(MinecraftInternalPlugin.INSTANCE,task->{p.performCommand("bot "+name+" spawn");p.sendMessage(t("正在生成假人"+name,NamedTextColor.GREEN));p.getScheduler().runDelayed(MinecraftInternalPlugin.INSTANCE,t2->openMain(p),null,10L);},null);return;
+            p.getScheduler().run(MinecraftInternalPlugin.INSTANCE,task->{p.performCommand("bot spawn "+name);p.sendMessage(t("正在生成假人"+name,NamedTextColor.GREEN));p.getScheduler().runDelayed(MinecraftInternalPlugin.INSTANCE,t2->openMain(p),null,10L);},null);return;
         }
         if(AWAIT_GIVE.remove(uid)){e.setCancelled(true);p.sendMessage(t("转让请用: /bot <假人名> give <"+e.getMessage().trim()+">",NamedTextColor.RED));return;}
         if(AWAIT_SEARCH.containsKey(uid)){e.setCancelled(true);String filt=e.getMessage().trim();String fn=AWAIT_SEARCH.remove(uid);
