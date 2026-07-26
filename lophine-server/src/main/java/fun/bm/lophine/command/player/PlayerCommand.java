@@ -79,192 +79,291 @@ public final class PlayerCommand {
         CommandDispatcher<CommandSourceStack> dispatcher = PaperCommands.INSTANCE.getDispatcher();
 
         LiteralArgumentBuilder<CommandSourceStack> command = LiteralArgumentBuilder.<CommandSourceStack>literal("bot")
-                .requires(src -> src.getSender().hasPermission(PERMISSION_BASE))
-                .executes(ctx -> {
-                    if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) { BotGui.openMain(p); return 1; }
-                    return 0;
-                })
-                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("gui").executes(ctx -> {
-                    if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) { BotGui.openMain(p); return 1; }
-                    return 0;
-                }))
-                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("help")
-                        .executes(ctx -> showHelp(ctx, 1))
-                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("page", IntegerArgumentType.integer(1, 3))
-                                .executes(ctx -> showHelp(ctx, IntegerArgumentType.getInteger(ctx, "page")))
-                        )
-                )
-                .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("player", StringArgumentType.word())
-                        .suggests((ctx, builder) -> {
-                            String input = builder.getRemainingLowerCase();
-                            for (String name : getPlayerNameSuggestions()) {
-                                if (name.toLowerCase().startsWith(input)) {
-                                    builder.suggest(name);
-                                }
-                            }
-                            return builder.buildFuture();
+                        .requires(src -> src.getSender().hasPermission(PERMISSION_BASE))
+                        .executes(ctx -> {
+                            if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) { BotGui.openMain(p); return 1; }
+                            return 0;
                         })
-                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("spawn")
-                                .executes(PlayerCommand::spawn)
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("gui").executes(ctx -> {
+                            if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) { BotGui.openMain(p); return 1; }
+                            return 0;
+                        }))
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("help")
+                                .executes(ctx -> showHelp(ctx, 1))
+                                .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("page", IntegerArgumentType.integer(1, 3))
+                                        .executes(ctx -> showHelp(ctx, IntegerArgumentType.getInteger(ctx, "page")))
+                                )
                         )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("time")
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("seconds", IntegerArgumentType.integer(1, 86400))
-                                                .executes(PlayerCommand::spawnDelayed)
+                        // === /bot kill <name> ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("kill")
+                                .then(playerArg().executes(PlayerCommand::kill)))
+                        // === /bot spawn <name> [time <seconds>] ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("spawn")
+                                .then(playerArg()
+                                        .executes(PlayerCommand::spawn)
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("time")
+                                                .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("seconds", IntegerArgumentType.integer(1, 86400))
+                                                        .executes(PlayerCommand::spawnDelayed)
+                                                )
                                         )
                                 )
                         )
-                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("kill").executes(PlayerCommand::kill))
-                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("menu").executes(ctx -> { ServerBot b = getBot(ctx); if(b!=null&&ctx.getSource().getSender() instanceof org.bukkit.entity.Player p) BotGui.openPanel(p,b); return 1; }))
-                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("echest").executes(ctx -> {
-                            ServerBot bot = getBot(ctx);
-                            if (bot != null && ctx.getSource().getSender() instanceof org.bukkit.entity.Player p && hasManagePermission(bot, p)) {
-                                BotGui.openEchest(p, bot);
-                            }
-                            return 1;
-                        }))
-                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("tp").executes(PlayerCommand::teleportHere))
+                        // === /bot menu <name> ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("menu")
+                                .then(playerArg().executes(ctx -> {
+                                    ServerBot b = getBot(ctx);
+                                    if (b != null && ctx.getSource().getSender() instanceof org.bukkit.entity.Player p)
+                                        BotGui.openPanel(p, b);
+                                    return 1;
+                                })))
+                        // === /bot echest <name> ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("echest")
+                                .then(playerArg().executes(ctx -> {
+                                    ServerBot bot = getBot(ctx);
+                                    if (bot != null && ctx.getSource().getSender() instanceof org.bukkit.entity.Player p && hasManagePermission(bot, p)) {
+                                        BotGui.openEchest(p, bot);
+                                    }
+                                    return 1;
+                                })))
+                        // === /bot tp <name> ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("tp")
+                                .then(playerArg().executes(PlayerCommand::teleportHere)))
+                        // === /bot actionstop <name> <action> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("actionstop")
-                                .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("action", StringArgumentType.word())
-                                        .executes(ctx -> {
-                                            if (cantManipulate(ctx)) return 0;
-                                            ServerBot bot = getBot(ctx);
-                                            if (bot == null) return 0;
-                                            String name = StringArgumentType.getString(ctx, "action");
-                                            stopAction(bot, name);
-                                            ctx.getSource().getSender().sendMessage(Component.text("已停止 " + name, NamedTextColor.GREEN));
-                                            return 1;
-                                        })))
-                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("stop").executes(manipulation(bot -> {
-                            stopAllActions(bot);
-                            bot.zza = 0.0f;
-                            bot.xxa = 0.0f;
-                        })))
-                        .then(makeActionLiteral("use", "use_auto"))
-                        .then(makeActionLiteral("attack", "attack"))
-                        .then(makeActionLiteral("break", "break"))
-                        .then(makeActionLiteral("jump", "jump"))
-                        .then(makeDropLiteral("drop"))
-                        .then(makeActionLiteral("swapHands", "swap"))
+                                .then(playerArg()
+                                        .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("action", StringArgumentType.word())
+                                                .executes(ctx -> {
+                                                    if (cantManipulate(ctx)) return 0;
+                                                    ServerBot bot = getBot(ctx);
+                                                    if (bot == null) return 0;
+                                                    String name = StringArgumentType.getString(ctx, "action");
+                                                    stopAction(bot, name);
+                                                    ctx.getSource().getSender().sendMessage(Component.text("已停止 " + name, NamedTextColor.GREEN));
+                                                    return 1;
+                                                }))))
+                        // === /bot stop <name> ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("stop")
+                                .then(playerArg().executes(manipulation(bot -> {
+                                    stopAllActions(bot);
+                                    bot.zza = 0.0f;
+                                    bot.xxa = 0.0f;
+                                }))))
+                        // === Action literals: use, attack, break, jump, drop, swapHands ===
+                        .then(playerActionLiteral("use", "use_auto"))
+                        .then(playerActionLiteral("attack", "attack"))
+                        .then(playerActionLiteral("break", "break"))
+                        .then(playerActionLiteral("jump", "jump"))
+                        .then(playerDropLiteral("drop"))
+                        .then(playerActionLiteral("swapHands", "swap"))
+                        // === /bot hotbar <name> <slot> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("hotbar")
-                                .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("slot", IntegerArgumentType.integer(1, 9))
-                                        .executes(PlayerCommand::hotbar)
+                                .then(playerArg()
+                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("slot", IntegerArgumentType.integer(1, 9))
+                                                .executes(PlayerCommand::hotbar)
+                                        )
                                 )
                         )
+                        // === /bot mount <name> [anything] ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("mount")
-                                .executes(manipulation(bot -> startAction(bot, "mount", ActionMode.ONCE)))
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("anything")
+                                .then(playerArg()
                                         .executes(manipulation(bot -> startAction(bot, "mount", ActionMode.ONCE)))
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("anything")
+                                                .executes(manipulation(bot -> startAction(bot, "mount", ActionMode.ONCE)))
+                                        )
                                 )
                         )
+                        // === /bot dismount <name> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("dismount")
-                                .executes(manipulation(bot -> bot.stopRiding()))
-                        )
+                                .then(playerArg().executes(manipulation(bot -> bot.stopRiding()))))
+                        // === /bot sneak <name> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("sneak")
-                                .executes(manipulation(bot -> startAction(bot, "sneak", ActionMode.CONTINUOUS)))
-                        )
+                                .then(playerArg().executes(manipulation(bot -> startAction(bot, "sneak", ActionMode.CONTINUOUS)))))
+                        // === /bot unsneak <name> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("unsneak")
-                                .executes(manipulation(bot -> stopAction(bot, "sneak")))
-                        )
+                                .then(playerArg().executes(manipulation(bot -> stopAction(bot, "sneak")))))
+                        // === /bot sprint <name> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("sprint")
-                                .executes(manipulation(bot -> startAction(bot, "sprint", ActionMode.CONTINUOUS)))
-                        )
+                                .then(playerArg().executes(manipulation(bot -> startAction(bot, "sprint", ActionMode.CONTINUOUS)))))
+                        // === /bot unsprint <name> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("unsprint")
-                                .executes(manipulation(bot -> stopAction(bot, "sprint")))
-                        )
+                                .then(playerArg().executes(manipulation(bot -> stopAction(bot, "sprint")))))
+                        // === /bot look <name> <direction|at|rotation> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("look")
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("north")
-                                        .executes(manipulation(bot -> bot.setYRot(180.0f)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("south")
-                                        .executes(manipulation(bot -> bot.setYRot(0.0f)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("east")
-                                        .executes(manipulation(bot -> bot.setYRot(-90.0f)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("west")
-                                        .executes(manipulation(bot -> bot.setYRot(90.0f)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("up")
-                                        .executes(manipulation(bot -> bot.setXRot(-90.0f)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("down")
-                                        .executes(manipulation(bot -> bot.setXRot(90.0f)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("at")
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Coordinates>argument("position", Vec3Argument.vec3())
+                                .then(playerArg()
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("north")
+                                                .executes(manipulation(bot -> bot.setYRot(180.0f)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("south")
+                                                .executes(manipulation(bot -> bot.setYRot(0.0f)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("east")
+                                                .executes(manipulation(bot -> bot.setYRot(-90.0f)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("west")
+                                                .executes(manipulation(bot -> bot.setYRot(90.0f)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("up")
+                                                .executes(manipulation(bot -> bot.setXRot(-90.0f)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("down")
+                                                .executes(manipulation(bot -> bot.setXRot(90.0f)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("at")
+                                                .then(RequiredArgumentBuilder.<CommandSourceStack, Coordinates>argument("position", Vec3Argument.vec3())
+                                                        .executes(ctx -> {
+                                   ServerBot bot = getBot(ctx);
+                                   if (bot == null) return 0;
+                                   CommandContext<net.minecraft.commands.CommandSourceStack> mcCtx = (CommandContext<net.minecraft.commands.CommandSourceStack>) (CommandContext<?>) ctx;
+                                   Vec3 pos = Vec3Argument.getVec3(mcCtx, "position");
+                                   bot.faceLocation(new Location(bot.getBukkitEntity().getWorld(), pos.x, pos.y, pos.z));
+                                   return 1;
+                                                        })
+                                                )
+                                        )
+                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Coordinates>argument("direction", RotationArgument.rotation())
                                                 .executes(ctx -> {
                                                     ServerBot bot = getBot(ctx);
                                                     if (bot == null) return 0;
                                                     CommandContext<net.minecraft.commands.CommandSourceStack> mcCtx = (CommandContext<net.minecraft.commands.CommandSourceStack>) (CommandContext<?>) ctx;
-                                                    Vec3 pos = Vec3Argument.getVec3(mcCtx, "position");
-                                                    bot.faceLocation(new Location(bot.getBukkitEntity().getWorld(), pos.x, pos.y, pos.z));
+                                                    Vec2 rot = RotationArgument.getRotation(mcCtx, "direction").getRotation(mcCtx.getSource());
+                                                    bot.setYRot(rot.y);
+                                                    bot.setXRot(rot.x);
                                                     return 1;
                                                 })
                                         )
                                 )
-                                .then(RequiredArgumentBuilder.<CommandSourceStack, Coordinates>argument("direction", RotationArgument.rotation())
-                                        .executes(ctx -> {
-                                            ServerBot bot = getBot(ctx);
-                                            if (bot == null) return 0;
-                                            CommandContext<net.minecraft.commands.CommandSourceStack> mcCtx = (CommandContext<net.minecraft.commands.CommandSourceStack>) (CommandContext<?>) ctx;
-                                            Vec2 rot = RotationArgument.getRotation(mcCtx, "direction").getRotation(mcCtx.getSource());
-                                            bot.setYRot(rot.y);
-                                            bot.setXRot(rot.x);
-                                            return 1;
-                                        })
-                                )
                         )
+                        // === /bot turn <name> <left|right|back|rotation> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("turn")
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("left")
-                                        .executes(manipulation(bot -> bot.setYRot(bot.getYRot() - 90.0f)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("right")
-                                        .executes(manipulation(bot -> bot.setYRot(bot.getYRot() + 90.0f)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("back")
-                                        .executes(manipulation(bot -> bot.setYRot(bot.getYRot() + 180.0f)))
-                                )
-                                .then(RequiredArgumentBuilder.<CommandSourceStack, Coordinates>argument("rotation", RotationArgument.rotation())
-                                        .executes(ctx -> {
-                                            ServerBot bot = getBot(ctx);
-                                            if (bot == null) return 0;
-                                            CommandContext<net.minecraft.commands.CommandSourceStack> mcCtx = (CommandContext<net.minecraft.commands.CommandSourceStack>) (CommandContext<?>) ctx;
-                                            Vec2 rot = RotationArgument.getRotation(mcCtx, "rotation").getRotation(mcCtx.getSource());
-                                            bot.setYRot(bot.getYRot() + rot.y);
-                                            bot.setXRot(bot.getXRot() + rot.x);
-                                            return 1;
-                                        })
+                                .then(playerArg()
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("left")
+                                                .executes(manipulation(bot -> bot.setYRot(bot.getYRot() - 90.0f)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("right")
+                                                .executes(manipulation(bot -> bot.setYRot(bot.getYRot() + 90.0f)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("back")
+                                                .executes(manipulation(bot -> bot.setYRot(bot.getYRot() + 180.0f)))
+                                        )
+                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Coordinates>argument("rotation", RotationArgument.rotation())
+                                                .executes(ctx -> {
+                                                    ServerBot bot = getBot(ctx);
+                                                    if (bot == null) return 0;
+                                                    CommandContext<net.minecraft.commands.CommandSourceStack> mcCtx = (CommandContext<net.minecraft.commands.CommandSourceStack>) (CommandContext<?>) ctx;
+                                                    Vec2 rot = RotationArgument.getRotation(mcCtx, "rotation").getRotation(mcCtx.getSource());
+                                                    bot.setYRot(bot.getYRot() + rot.y);
+                                                    bot.setXRot(bot.getXRot() + rot.x);
+                                                    return 1;
+                                                })
+                                        )
                                 )
                         )
+                        // === /bot move <name> <forward|backward|left|right> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("move")
-                                .executes(manipulation(bot -> stopAction(bot, "move")))
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("forward")
-                                        .executes(manipulation(bot -> startMoveAction(bot, MoveDirection.FORWARD)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("backward")
-                                        .executes(manipulation(bot -> startMoveAction(bot, MoveDirection.BACKWARD)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("left")
-                                        .executes(manipulation(bot -> startMoveAction(bot, MoveDirection.LEFT)))
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("right")
-                                        .executes(manipulation(bot -> startMoveAction(bot, MoveDirection.RIGHT)))
+                                .then(playerArg()
+                                        .executes(manipulation(bot -> stopAction(bot, "move")))
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("forward")
+                                                .executes(manipulation(bot -> startMoveAction(bot, MoveDirection.FORWARD)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("backward")
+                                                .executes(manipulation(bot -> startMoveAction(bot, MoveDirection.BACKWARD)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("left")
+                                                .executes(manipulation(bot -> startMoveAction(bot, MoveDirection.LEFT)))
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("right")
+                                                .executes(manipulation(bot -> startMoveAction(bot, MoveDirection.RIGHT)))
+                                        )
                                 )
                         )
+                        // === /bot col <name> <add|remove|list> [target] ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("col")
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("add")
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("target", StringArgumentType.word())
-                                                .suggests((ctx, builder) -> {
-                                                    String input = builder.getRemainingLowerCase();
-                                                    builder.suggest("all");
-                                                    for (Player p : Bukkit.getOnlinePlayers()) {
-                                                        String name = p.getName();
-                                                        if (name.toLowerCase().startsWith(input)) {
-                                                            builder.suggest(name);
-                                                        }
-                                                    }
-                                                    return builder.buildFuture();
-                                                })
+                                .then(playerArg()
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("add")
+                                                .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("target", StringArgumentType.word())
+                                                        .suggests((ctx, builder) -> {
+                                   String input = builder.getRemainingLowerCase();
+                                   builder.suggest("all");
+                                   for (Player p : Bukkit.getOnlinePlayers()) {
+                                       String name = p.getName();
+                                       if (name.toLowerCase().startsWith(input)) {
+                                           builder.suggest(name);
+                                       }
+                                   }
+                                   return builder.buildFuture();
+                                                        })
+                                                        .executes(ctx -> {
+                                   ServerBot bot = getBot(ctx);
+                                   if (bot == null) return 0;
+                                   if (!hasManagePermission(bot, ctx.getSource().getSender())) {
+                                       ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+                                       return 0;
+                                   }
+                                   String targetName = StringArgumentType.getString(ctx, "target");
+                                   if (targetName.equals("all")) {
+                                                                                           bot.collaborators.add(ServerBot.PUBLIC_ACCESS_UUID);
+                                                                                           ctx.getSource().getSender().sendMessage(Component.text("已添加所有玩家为协作作者", NamedTextColor.GREEN));
+                                   } else {
+                                       Player target = Bukkit.getPlayer(targetName);
+                                       if (target == null) {
+                                           ctx.getSource().getSender().sendMessage(Component.text("找不到玩家: " + targetName, NamedTextColor.RED));
+                                           return 0;
+                                       }
+                                       bot.collaborators.add(target.getUniqueId());
+                                       ctx.getSource().getSender().sendMessage(Component.text("已添加 " + targetName + " 为协作作者", NamedTextColor.GREEN));
+                                   }
+                                   return 1;
+                                                        })
+                                                )
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("remove")
+                                                .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("target", StringArgumentType.word())
+                                                        .suggests((ctx, builder) -> {
+                                   String input = builder.getRemainingLowerCase();
+                                   builder.suggest("all");
+                                   for (String name : getCollaboratorNames(ctx)) {
+                                       if (name.toLowerCase().startsWith(input)) {
+                                           builder.suggest(name);
+                                       }
+                                   }
+                                   return builder.buildFuture();
+                                                        })
+                                                        .executes(ctx -> {
+                                   ServerBot bot = getBot(ctx);
+                                   if (bot == null) return 0;
+                                   if (!hasManagePermission(bot, ctx.getSource().getSender())) {
+                                       ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+                                       return 0;
+                                   }
+                                   String targetName = StringArgumentType.getString(ctx, "target");
+                                   if (targetName.equals("all")) {
+                                       bot.collaborators.remove(ServerBot.PUBLIC_ACCESS_UUID);
+                                       ctx.getSource().getSender().sendMessage(Component.text("已移除所有协作作者", NamedTextColor.GREEN));
+                                   } else {
+                                       String[] names = getCollaboratorNames(ctx);
+                                       Player target = null;
+                                       for (String n : names) {
+                                           Player p = Bukkit.getPlayer(n);
+                                           if (p != null && p.getName().equalsIgnoreCase(targetName)) {
+                                               target = p;
+                                               break;
+                                           }
+                                       }
+                                       if (target == null) {
+                                           ctx.getSource().getSender().sendMessage(Component.text("找不到该协作作者", NamedTextColor.RED));
+                                           return 0;
+                                       }
+                                       if (bot.collaborators.remove(target.getUniqueId())) {
+                                           ctx.getSource().getSender().sendMessage(Component.text("已移除 " + targetName + " 的协作权限", NamedTextColor.GREEN));
+                                       } else {
+                                           ctx.getSource().getSender().sendMessage(Component.text(targetName + " 不是该假人的协作作者", NamedTextColor.YELLOW));
+                                       }
+                                   }
+                                   return 1;
+                                                        })
+                                                )
+                                        )
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("list")
                                                 .executes(ctx -> {
                                                     ServerBot bot = getBot(ctx);
                                                     if (bot == null) return 0;
@@ -272,122 +371,55 @@ public final class PlayerCommand {
                                                         ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
                                                         return 0;
                                                     }
-                                                    String targetName = StringArgumentType.getString(ctx, "target").toLowerCase(Locale.ROOT);
-                                                    if (targetName.equals("all")) {
-                                                        bot.collaborators.add(ServerBot.PUBLIC_ACCESS_UUID);
-                                                        ctx.getSource().getSender().sendMessage(Component.text("已将所有玩家添加为 " + bot.getBukkitEntity().getName() + " 的协作者", NamedTextColor.YELLOW));
+                                                    if (bot.collaborators.contains(ServerBot.PUBLIC_ACCESS_UUID)) {
+                                                        ctx.getSource().getSender().sendMessage(Component.text("协作作者: 全部", NamedTextColor.GREEN));
+                                                    } else if (bot.collaborators.isEmpty()) {
+                                                        ctx.getSource().getSender().sendMessage(Component.text("该假人没有协作作者", NamedTextColor.YELLOW));
                                                     } else {
-                                                        Player target = Bukkit.getPlayerExact(targetName);
-                                                        if (target == null) {
-                                                            ctx.getSource().getSender().sendMessage(Component.text("玩家不在线", NamedTextColor.RED));
-                                                            return 0;
+                                                        Set<String> names = new LinkedHashSet<>();
+                                                        for (String name : getCollaboratorNames(ctx)) {
+                                   names.add(name);
                                                         }
-                                                        bot.collaborators.add(target.getUniqueId());
-                                                        ctx.getSource().getSender().sendMessage(Component.text("已将 " + target.getName() + " 添加为 " + bot.getBukkitEntity().getName() + " 的协作者", NamedTextColor.YELLOW));
+                                                        ctx.getSource().getSender().sendMessage(Component.text("协作作者: " + String.join(", ", names), NamedTextColor.GREEN));
                                                     }
                                                     return 1;
                                                 })
                                         )
                                 )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("remove")
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("target", StringArgumentType.word())
-                                                .suggests((ctx, builder) -> {
-                                                    String input = builder.getRemainingLowerCase();
-                                                    builder.suggest("all");
-                                                    for (String name : getCollaboratorNames(ctx)) {
-                                                        if (name.toLowerCase().startsWith(input)) {
-                                                            builder.suggest(name);
-                                                        }
-                                                    }
-                                                    return builder.buildFuture();
-                                                })
-                                                .executes(ctx -> {
-                                                    ServerBot bot = getBot(ctx);
-                                                    if (bot == null) return 0;
-                                                    if (!hasManagePermission(bot, ctx.getSource().getSender())) {
-                                                        ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
-                                                        return 0;
-                                                    }
-                                                    String targetName = StringArgumentType.getString(ctx, "target").toLowerCase(Locale.ROOT);
-                                                    if (targetName.equals("all")) {
-                                                        bot.collaborators.remove(ServerBot.PUBLIC_ACCESS_UUID);
-                                                        ctx.getSource().getSender().sendMessage(Component.text("已移除 " + bot.getBukkitEntity().getName() + " 的所有协作者", NamedTextColor.YELLOW));
-                                                    } else {
-                                                        String[] names = getCollaboratorNames(ctx);
-                                                        Player target = null;
-                                                        for (String n : names) {
-                                                            Player p = Bukkit.getPlayerExact(n);
-                                                            if (p != null && p.getName().equalsIgnoreCase(targetName)) {
-                                                                target = p;
-                                                                break;
-                                                            }
-                                                        }
-                                                        if (target == null) {
-                                                            ctx.getSource().getSender().sendMessage(Component.text("找不到该协作者", NamedTextColor.RED));
-                                                            return 0;
-                                                        }
-                                                        if (bot.collaborators.remove(target.getUniqueId())) {
-                                                            ctx.getSource().getSender().sendMessage(Component.text("已将 " + target.getName() + " 从 " + bot.getBukkitEntity().getName() + " 的协作者列表中移除", NamedTextColor.YELLOW));
-                                                        } else {
-                                                            ctx.getSource().getSender().sendMessage(Component.text("该玩家不是协作者", NamedTextColor.RED));
-                                                        }
-                                                    }
-                                                    return 1;
-                                                })
-                                        )
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("list")
+                        )
+                        // === /bot config <name> [setting] [value] ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("config")
+                                .then(playerArg()
                                         .executes(ctx -> {
+                                            if (cantManipulate(ctx)) return 0;
                                             ServerBot bot = getBot(ctx);
                                             if (bot == null) return 0;
-                                            if (!hasManagePermission(bot, ctx.getSource().getSender())) {
-                                                ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+                                            if (!FakeplayerConfig.canModifyConfig) {
+                                                ctx.getSource().getSender().sendMessage(Component.text("假人配置修改功能已被禁用", NamedTextColor.RED));
                                                 return 0;
                                             }
-                                            if (bot.collaborators.contains(ServerBot.PUBLIC_ACCESS_UUID)) {
-                                                ctx.getSource().getSender().sendMessage(Component.text("假人 " + bot.getBukkitEntity().getName() + " 的协作者: all", NamedTextColor.YELLOW));
-                                            } else if (bot.collaborators.isEmpty()) {
-                                                ctx.getSource().getSender().sendMessage(Component.text("假人 " + bot.getBukkitEntity().getName() + " 没有协作者", NamedTextColor.YELLOW));
-                                            } else {
-                                                Set<String> names = new LinkedHashSet<>();
-                                                for (String name : getCollaboratorNames(ctx)) {
-                                                    names.add(name);
-                                                }
-                                                ctx.getSource().getSender().sendMessage(Component.text("假人 " + bot.getBukkitEntity().getName() + " 的协作者: " + String.join(", ", names), NamedTextColor.YELLOW));
+                                            if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player player) {
+                                                ServerPlayer serverPlayer = (ServerPlayer) ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
+                                                BotConfigMenu.open(serverPlayer, bot);
                                             }
                                             return 1;
                                         })
-                                )
-                        )
-                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("config")
-                                .executes(ctx -> {
-                                    if (cantManipulate(ctx)) return 0;
-                                    ServerBot bot = getBot(ctx);
-                                    if (bot == null) return 0;
-                                    if (!FakeplayerConfig.canModifyConfig) {
-                                        ctx.getSource().getSender().sendMessage(Component.text("修改配置功能已被禁用", NamedTextColor.RED));
-                                        return 0;
-                                    }
-                                    if (ctx.getSource().getSender() instanceof org.bukkit.entity.Player player) {
-                                        ServerPlayer serverPlayer = (ServerPlayer) ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
-                                        BotConfigMenu.open(serverPlayer, bot);
-                                    }
-                                    return 1;
-                                })
-                                .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("configName", StringArgumentType.word())
-                                        .suggests((ctx, builder) -> {
-                                            for (AbstractBotConfig<?, ?> c : Configs.getConfigs()) {
-                                                builder.suggest(c.getName());
-                                            }
-                                            return builder.buildFuture();
-                                        })
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("value", StringArgumentType.word())
-                                                .executes(ctx -> setBotConfig(ctx))
+                                        .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("setting", StringArgumentType.word())
+                                                .suggests((ctx, builder) -> {
+                                                    for (AbstractBotConfig<?, ?> c : Configs.getConfigs()) {
+                                                        builder.suggest(c.getName());
+                                                    }
+                                                    return builder.buildFuture();
+                                                })
+                                                .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("value", StringArgumentType.word())
+                                                        .executes(ctx -> setBotConfig(ctx))
+                                                )
                                         )
                                 )
                         )
-                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("open")
-                                .executes(ctx -> {
+                        // === /bot inventory <name> ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("inventory")
+                                .then(playerArg().executes(ctx -> {
                                     ServerBot bot = getBot(ctx);
                                     if (bot == null) return 0;
                                     if (!hasManagePermission(bot, ctx.getSource().getSender())) {
@@ -405,68 +437,88 @@ public final class PlayerCommand {
                                         player.openInventory(inv);
                                     }
                                     return 1;
-                                })
+                                }))
                         )
+                        // === /bot xp <name> <take|level|give|clear> [amount] ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("xp")
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("take")
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("amount", IntegerArgumentType.integer(1))
-                                                .executes(ctx -> {
-                                                    ServerBot bot = getBot(ctx);
-                                                    if (bot == null) return 0;
-                                                    if (!hasManagePermission(bot, ctx.getSource().getSender())) {
-                                                        ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
-                                                        return 0;
-                                                    }
-                                                    int amount = IntegerArgumentType.getInteger(ctx, "amount");
-                                                    org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
-                                                    if (player == null) {
-                                                        ctx.getSource().getSender().sendMessage(Component.text("只有玩家才能获取经验", NamedTextColor.RED));
-                                                        return 0;
-                                                    }
-                                                    return takeXp(bot, player, amount, false, ctx);
-                                                })
+                                .then(playerArg()
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("take")
+                                                .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("amount", IntegerArgumentType.integer(1))
+                                                        .executes(ctx -> {
+                                   ServerBot bot = getBot(ctx);
+                                   if (bot == null) return 0;
+                                   if (!hasManagePermission(bot, ctx.getSource().getSender())) {
+                                       ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+                                       return 0;
+                                   }
+                                   int amount = IntegerArgumentType.getInteger(ctx, "amount");
+                                   org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
+                                   if (player == null) {
+                                       ctx.getSource().getSender().sendMessage(Component.text("仅玩家可执行此操作", NamedTextColor.RED));
+                                       return 0;
+                                   }
+                                   return takeXp(bot, player, amount, false, ctx);
+                                                        })
+                                                )
                                         )
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("level")
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("amount", IntegerArgumentType.integer(1))
-                                                .executes(ctx -> {
-                                                    ServerBot bot = getBot(ctx);
-                                                    if (bot == null) return 0;
-                                                    if (!hasManagePermission(bot, ctx.getSource().getSender())) {
-                                                        ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
-                                                        return 0;
-                                                    }
-                                                    int amount = IntegerArgumentType.getInteger(ctx, "amount");
-                                                    org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
-                                                    if (player == null) {
-                                                        ctx.getSource().getSender().sendMessage(Component.text("只有玩家才能操作经验", NamedTextColor.RED));
-                                                        return 0;
-                                                    }
-                                                    return takeXpLevel(bot, player, amount, ctx);
-                                                })
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("level")
+                                                .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("amount", IntegerArgumentType.integer(1))
+                                                        .executes(ctx -> {
+                                   ServerBot bot = getBot(ctx);
+                                   if (bot == null) return 0;
+                                   if (!hasManagePermission(bot, ctx.getSource().getSender())) {
+                                       ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+                                       return 0;
+                                   }
+                                   int amount = IntegerArgumentType.getInteger(ctx, "amount");
+                                   org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
+                                   if (player == null) {
+                                       ctx.getSource().getSender().sendMessage(Component.text("仅玩家可执行此操作", NamedTextColor.RED));
+                                       return 0;
+                                   }
+                                   return takeXpLevel(bot, player, amount, ctx);
+                                                        })
+                                                )
+                                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("give")
+                                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("amount", IntegerArgumentType.integer(1))
+                                       .executes(ctx -> {
+                                           ServerBot bot = getBot(ctx);
+                                           if (bot == null) return 0;
+                                           if (!hasManagePermission(bot, ctx.getSource().getSender())) {
+                                               ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+                                               return 0;
+                                           }
+                                           int amount = IntegerArgumentType.getInteger(ctx, "amount");
+                                           org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
+                                           if (player == null) {
+                                               ctx.getSource().getSender().sendMessage(Component.text("仅玩家可执行此操作", NamedTextColor.RED));
+                                               return 0;
+                                           }
+                                           return giveXpLevelToBot(bot, player, amount, ctx);
+                                       })
+                                                        )
+                                                )
                                         )
                                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("give")
                                                 .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("amount", IntegerArgumentType.integer(1))
                                                         .executes(ctx -> {
-                                                            ServerBot bot = getBot(ctx);
-                                                            if (bot == null) return 0;
-                                                            if (!hasManagePermission(bot, ctx.getSource().getSender())) {
-                                                                ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
-                                                                return 0;
-                                                            }
-                                                            int amount = IntegerArgumentType.getInteger(ctx, "amount");
-                                                            org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
-                                                            if (player == null) {
-                                                                ctx.getSource().getSender().sendMessage(Component.text("只有玩家才能操作经验", NamedTextColor.RED));
-                                                                return 0;
-                                                            }
-                                                            return giveXpLevelToBot(bot, player, amount, ctx);
+                                   ServerBot bot = getBot(ctx);
+                                   if (bot == null) return 0;
+                                   if (!hasManagePermission(bot, ctx.getSource().getSender())) {
+                                       ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+                                       return 0;
+                                   }
+                                   int amount = IntegerArgumentType.getInteger(ctx, "amount");
+                                   org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
+                                   if (player == null) {
+                                       ctx.getSource().getSender().sendMessage(Component.text("仅玩家可执行此操作", NamedTextColor.RED));
+                                       return 0;
+                                   }
+                                   return giveXpToBot(bot, player, amount, false, ctx);
                                                         })
                                                 )
                                         )
-                                )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("give")
-                                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("amount", IntegerArgumentType.integer(1))
+                                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("clear")
                                                 .executes(ctx -> {
                                                     ServerBot bot = getBot(ctx);
                                                     if (bot == null) return 0;
@@ -474,40 +526,23 @@ public final class PlayerCommand {
                                                         ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
                                                         return 0;
                                                     }
-                                                    int amount = IntegerArgumentType.getInteger(ctx, "amount");
-                                                    org.bukkit.entity.Player player = ctx.getSource().getSender() instanceof org.bukkit.entity.Player p ? p : null;
-                                                    if (player == null) {
-                                                        ctx.getSource().getSender().sendMessage(Component.text("只有玩家才能获取经验", NamedTextColor.RED));
-                                                        return 0;
-                                                    }
-                                                    return giveXpToBot(bot, player, amount, false, ctx);
+                                                    bot.totalExperience = 0;
+                                                    bot.experienceLevel = 0;
+                                                    bot.experienceProgress = 0f;
+                                                    ctx.getSource().getSender().sendMessage(join(spaces(),
+                                   Component.text("已清空", NamedTextColor.GRAY),
+                                   Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
+                                   Component.text("的经验", NamedTextColor.GRAY)
+                                                    ));
+                                                    return 1;
                                                 })
                                         )
                                 )
-                                .then(LiteralArgumentBuilder.<CommandSourceStack>literal("clear")
-                                        .executes(ctx -> {
-                                            ServerBot bot = getBot(ctx);
-                                            if (bot == null) return 0;
-                                            if (!hasManagePermission(bot, ctx.getSource().getSender())) {
-                                                ctx.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
-                                                return 0;
-                                            }
-                                            bot.totalExperience = 0;
-                                            bot.experienceLevel = 0;
-                                            bot.experienceProgress = 0f;
-            
-                                            ctx.getSource().getSender().sendMessage(join(spaces(),
-                                                    Component.text("已清空", NamedTextColor.GRAY),
-                                                    Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
-                                                    Component.text("的经验", NamedTextColor.GRAY)
-                                            ));
-                                            return 1;
-                                        })
-                                )
                         )
+                        // === /bot save <name> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("save")
                                 .requires(src -> src.getSender().isOp() || src.getSender() instanceof org.bukkit.entity.Player)
-                                .executes(ctx -> {
+                                .then(playerArg().executes(ctx -> {
                                     ServerBot bot = getBot(ctx);
                                     if (bot == null) return 0;
                                     BotList.INSTANCE.saveBotResume(bot);
@@ -517,8 +552,9 @@ public final class PlayerCommand {
                                             Component.text("的数据", NamedTextColor.GRAY)
                                     ));
                                     return 1;
-                                })
+                                }))
                         )
+                        // === /bot load <name> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("load")
                                 .requires(src -> src.getSender().isOp())
                                 .then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("name", StringArgumentType.word())
@@ -535,10 +571,17 @@ public final class PlayerCommand {
                                                     Component.text(bot.getBukkitEntity().getName(), NamedTextColor.AQUA),
                                                     Component.text("的数据", NamedTextColor.GRAY)
                                             ));
-                                             return 1;
-                                             })
-                                             )
-                                             );
+                                            return 1;
+                                        })
+                                )
+                        )
+                        // === /bot <name> — fallback: open panel for specific bot ===
+                        .then(playerArg().executes(ctx -> {
+                            ServerBot b = getBot(ctx);
+                            if (b != null && ctx.getSource().getSender() instanceof org.bukkit.entity.Player p)
+                                BotGui.openPanel(p, b);
+                            return 1;
+                        }));
 
         PaperCommands.INSTANCE.setValid();
         dispatcher.register(command);
@@ -560,6 +603,19 @@ public final class PlayerCommand {
         PaperCommands.INSTANCE.invalidate();
         Bukkit.getOnlinePlayers().forEach(Player::updateCommands);
         registered = false;
+    }
+
+    private static RequiredArgumentBuilder<CommandSourceStack, String> playerArg() {
+        return RequiredArgumentBuilder.<CommandSourceStack, String>argument("player", StringArgumentType.word())
+                .suggests((ctx, builder) -> {
+                    String input = builder.getRemainingLowerCase();
+                    for (String name : getPlayerNameSuggestions()) {
+                        if (name.toLowerCase().startsWith(input)) {
+                            builder.suggest(name);
+                        }
+                    }
+                    return builder.buildFuture();
+                });
     }
 
     private static Collection<String> getPlayerNameSuggestions() {
@@ -940,6 +996,88 @@ public final class PlayerCommand {
             action.accept(bot);
             return 1;
         };
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> playerActionLiteral(String cmd, String actionName) {
+        return LiteralArgumentBuilder.<CommandSourceStack>literal(cmd)
+                .then(playerArg()
+                        .executes(manipulation(bot -> startAction(bot, actionName, ActionMode.ONCE)))
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("once")
+                                .executes(manipulation(bot -> startAction(bot, actionName, ActionMode.ONCE)))
+                        )
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("continuous")
+                                .executes(manipulation(bot -> startAction(bot, actionName, ActionMode.CONTINUOUS)))
+                        )
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("interval")
+                                .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("ticks", IntegerArgumentType.integer(1))
+                                        .executes(c -> {
+                                            ServerBot bot = getBot(c);
+                                            if (bot == null) return 0;
+                                            int ticks = IntegerArgumentType.getInteger(c, "ticks");
+                                            startAction(bot, actionName, ActionMode.interval(ticks));
+                                            return 1;
+                                        })
+                                )
+                        )
+                );
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> playerDropLiteral(String cmd) {
+        return LiteralArgumentBuilder.<CommandSourceStack>literal(cmd)
+                .then(playerArg()
+                        .executes(manipulation(bot -> startAction(bot, "drop", ActionMode.ONCE)))
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("once")
+                                .executes(manipulation(bot -> startAction(bot, "drop", ActionMode.ONCE)))
+                        )
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("continuous")
+                                .executes(manipulation(bot -> startAction(bot, "drop", ActionMode.CONTINUOUS)))
+                        )
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("interval")
+                                .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("ticks", IntegerArgumentType.integer(1))
+                                        .executes(c -> {
+                                            ServerBot bot = getBot(c);
+                                            if (bot == null) return 0;
+                                            int ticks = IntegerArgumentType.getInteger(c, "ticks");
+                                            startAction(bot, "drop", ActionMode.interval(ticks));
+                                            return 1;
+                                        })
+                                )
+                        )
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("all")
+                                .executes(manipulation(bot -> bot.dropAll(false)))
+                        )
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("mainhand")
+                                .executes(manipulation(bot -> {
+                                    var item = bot.getMainHandItem().copy();
+                                    if (!item.isEmpty()) {
+                                        bot.drop(item, false, false);
+                                        bot.getMainHandItem().setCount(0);
+                                    }
+                                }))
+                        )
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("offhand")
+                                .executes(manipulation(bot -> {
+                                    var item = bot.getOffhandItem().copy();
+                                    if (!item.isEmpty()) {
+                                        bot.drop(item, false, false);
+                                        bot.getOffhandItem().setCount(0);
+                                    }
+                                }))
+                        )
+                        .then(RequiredArgumentBuilder.<CommandSourceStack, Integer>argument("slot", IntegerArgumentType.integer(0, 40))
+                                .executes(c -> {
+                                    ServerBot bot = getBot(c);
+                                    if (bot == null) return 0;
+                                    int slot = IntegerArgumentType.getInteger(c, "slot");
+                                    var item = bot.getInventory().getItem(slot).copy();
+                                    if (!item.isEmpty()) {
+                                        bot.drop(item, false, false);
+                                        bot.getInventory().getItem(slot).setCount(0);
+                                    }
+                                    return 1;
+                                })
+                        )
+                );
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> makeActionLiteral(String commandName, String actionName) {
