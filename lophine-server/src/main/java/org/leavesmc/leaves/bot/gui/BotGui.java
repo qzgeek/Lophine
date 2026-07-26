@@ -55,6 +55,10 @@ public final class BotGui implements Listener {
     private static String actOf(ItemStack s){if(s==null||!s.hasItemMeta())return null;return s.getItemMeta().getPersistentDataContainer().get(AKEY,PersistentDataType.STRING);}
     private static String ownName(ServerBot bot){if(bot.createPlayer==null)return "未知";BotOwnerRegistry.Entry e=BotOwnerRegistry.INSTANCE.get(bot.getScoreboardName());if(e!=null&&!e.ownerName.isEmpty())return e.ownerName;String n=Bukkit.getOfflinePlayer(bot.createPlayer).getName();return n!=null?n:"未知";}
     private static boolean canM(ServerBot bot, Player p){return p.isOp()||bot.hasManagePermission(p.getUniqueId());}
+    private static String botCmdName(ServerBot bot) {
+        String sn = bot.getScoreboardName();
+        return sn.startsWith("BOT_") ? sn.substring(4) : sn;
+    }
     public static synchronized void ensureR(){if(!reg){Bukkit.getPluginManager().registerEvents(new BotGui(),MinecraftInternalPlugin.INSTANCE);reg=true;}}
 
     // --- Pagination helpers ---
@@ -106,11 +110,12 @@ public final class BotGui implements Listener {
         inv.setItem(9,border()); inv.setItem(17,border());
         inv.setItem(18,simple(Material.NAME_TAG,"create","+ 创建假人",NamedTextColor.GREEN,"点击后在聊天栏输入名字"));
         navRow(inv,page,total,"close");
-        p.openInventory(inv);
+    p.openInventory(inv);
     }
 
-    /* ========== PANEL: 假人主菜单 (27 slot) ========== */
-    public static void openPanel(@NotNull Player p, @NotNull ServerBot bot) {
+    /* ========== PANEL: 假人主菜单 (27 slot, paginated) ========== */
+    public static void openPanel(@NotNull Player p, @NotNull ServerBot bot) { openPanel(p, bot, 0); }
+    public static void openPanel(@NotNull Player p, @NotNull ServerBot bot, int page) {
         if(!canM(bot,p)){p.sendMessage(t("没有权限",NamedTextColor.RED));return;}ensureR();
         String fn=bot.getScoreboardName(); var loc=bot.getBukkitEntity().getLocation();
         Inventory inv=Bukkit.createInventory(new BotGuiHolder(BotGuiHolder.MenuType.PANEL,fn),27,t("假人 · "+fn,NamedTextColor.DARK_GRAY));
@@ -121,21 +126,22 @@ public final class BotGui implements Listener {
             t(String.format("(%d,%d,%d)",loc.getBlockX(),loc.getBlockY(),loc.getBlockZ()),NamedTextColor.GRAY),
             t("主人:"+ownName(bot),NamedTextColor.GRAY))));
         for(int i=9;i<27;i++)inv.setItem(i,border());
-        inv.setItem(10,simple(Material.CHEST,"inv","背包",NamedTextColor.GREEN));
-        inv.setItem(11,simple(Material.ENDER_CHEST,"echest","末影箱",NamedTextColor.LIGHT_PURPLE));
-        inv.setItem(12,simple(Material.LEVER,"actions","动作",NamedTextColor.YELLOW));
-        inv.setItem(13,simple(Material.CRAFTING_TABLE,"settings","设置",NamedTextColor.AQUA));
-        inv.setItem(14,simple(Material.GOLD_INGOT,"perm","权限管理",NamedTextColor.GOLD));
-        inv.setItem(15,simple(Material.EXPERIENCE_BOTTLE,"xp","经验",NamedTextColor.GREEN));
-        inv.setItem(16,simple(Material.ENDER_PEARL,"tp","传送到我",NamedTextColor.BLUE));
-        inv.setItem(17,simple(Material.BARRIER,"rm","删除假人",NamedTextColor.DARK_RED));
-        inv.setItem(18,simple(Material.ARROW,"back_main","返回列表",NamedTextColor.WHITE));
-        inv.setItem(26,simple(Material.OAK_DOOR,"close","关闭",NamedTextColor.WHITE));
-        for(int i=19;i<=25;i++)inv.setItem(i,border());
+        if(page==0){
+            inv.setItem(10,simple(Material.CHEST,"inv","背包",NamedTextColor.GREEN));
+            inv.setItem(11,simple(Material.ENDER_CHEST,"echest","末影箱",NamedTextColor.LIGHT_PURPLE));
+            inv.setItem(12,simple(Material.LEVER,"actions","动作",NamedTextColor.YELLOW));
+            inv.setItem(13,simple(Material.CRAFTING_TABLE,"settings","设置",NamedTextColor.AQUA));
+            inv.setItem(14,simple(Material.GOLD_INGOT,"perm","权限管理",NamedTextColor.GOLD));
+            inv.setItem(15,simple(Material.EXPERIENCE_BOTTLE,"xp","经验",NamedTextColor.GREEN));
+            inv.setItem(16,simple(Material.ENDER_PEARL,"tp","传送到我",NamedTextColor.BLUE));
+        } else {
+            inv.setItem(13,simple(Material.BARRIER,"rm","删除该假人",NamedTextColor.DARK_RED,"点击确认删除","数据不可恢复!"));
+        }
+        navRow(inv,page,2,"close");
         p.openInventory(inv);
     }
 
-    /* ========== ACTIONS (54 slot, keep as-is) ========== */
+    /* ========== ACTIONS 动作页面 (54 slot) ========== */
     public static void openActions(@NotNull Player p, @NotNull ServerBot bot) {
         if(!canM(bot,p)){p.sendMessage(t("没有权限",NamedTextColor.RED));return;}ensureR();
         String fn=bot.getScoreboardName();
@@ -382,7 +388,10 @@ public final class BotGui implements Listener {
                     if(isPick!=null&&isPick)openOnlinePicker(p,b,pg,null);
                     else openPermMgmt(p,b,pg);
                 }else openMain(p);}
-                case PANEL->{if(b!=null)openXP(p,b,pg);}
+                case PANEL->{if(b!=null){
+                    if(XP_PAGE.containsKey(p.getUniqueId())) openXP(p,b,pg);
+                    else openPanel(p,b,pg);
+                }}
                 default->{}
             }return;
         }
