@@ -32,6 +32,7 @@ import io.papermc.paper.threadedregions.scheduler.FoliaGlobalRegionScheduler;
 import io.papermc.paper.util.MCUtil;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
@@ -455,6 +456,35 @@ public class BotList {
             this.server.getPlayerList().broadcastSystemMessage(PaperAdventure.asVanilla(removeMessage), false);
         }
         return true;
+    }
+
+    /**
+     * Permanently removes a bot: drops items, deletes all saved data, removes from BotOwnerRegistry.
+     * After this, the bot is truly gone and cannot be re-summoned.
+     */
+    public void removeBotPermanently(@NotNull ServerBot bot, @Nullable CommandSender remover) {
+        // 1. Remove from world (no save, no resume)
+        this.removeBot(bot, BotRemoveEvent.RemoveReason.COMMAND, remover, false, false);
+
+        // 2. Delete resume data files
+        this.resumeDataStorage.removeSavedData(bot);
+
+        // 3. Delete config and inventory files
+        this.deleteTagFile(bot.getStringUUID(), "bot_configs");
+        this.deleteTagFile(bot.getStringUUID(), "bot_inventory");
+
+        // 4. Remove from BotOwnerRegistry
+        BotOwnerRegistry.INSTANCE.remove(bot.getScoreboardName());
+
+        // 5. Notify the remover
+        CommandSender sender = remover != null ? remover : Bukkit.getConsoleSender();
+        sender.sendMessage(
+            net.kyori.adventure.text.Component.text()
+                .append(net.kyori.adventure.text.Component.text("Bot ", GRAY))
+                .append(PaperAdventure.asAdventure(bot.getDisplayName()))
+                .append(net.kyori.adventure.text.Component.text(" 已彻底删除，数据不可恢复", DARK_RED))
+                .build()
+        );
     }
 
     public void removeAllIn(String worldUuid) {

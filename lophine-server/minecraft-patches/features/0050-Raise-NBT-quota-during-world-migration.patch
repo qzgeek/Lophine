@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: qzgeek <xcgeek@163.com>
+Date: Mon, 21 Jul 2026 22:45:00 +0800
+Subject: [PATCH] Raise NBT quota during world migration
+
+
+diff --git a/net/minecraft/util/filefix/FileFixerUpper.java b/net/minecraft/util/filefix/FileFixerUpper.java
+index 0000000000000000000000000000000000000000..0000000000000000000000000000000000000000 100644
+--- a/net/minecraft/util/filefix/FileFixerUpper.java
++++ b/net/minecraft/util/filefix/FileFixerUpper.java
+@@ -242,7 +242,7 @@
+
+     private void writeUpdatedLevelData(final Path worldFolder, final int toVersion) throws IOException {
+         Path levelDatPath = worldFolder.resolve(LevelResource.LEVEL_DATA_FILE.id());
+-        CompoundTag unfixedLevelDat = NbtIo.readCompressed(levelDatPath, NbtAccounter.defaultQuota());
++        CompoundTag unfixedLevelDat = NbtIo.readCompressed(levelDatPath, NbtAccounter.create(NbtAccounter.DEFAULT_NBT_QUOTA * 50L)); // Lophine - raise NBT quota during world migration
+         CompoundTag unfixedDataTag = unfixedLevelDat.getCompoundOrEmpty("Data");
+         int dataVersion = NbtUtils.getDataVersion(unfixedDataTag);
+         Dynamic<?> fixed = DataFixTypes.LEVEL.update(this.dataFixer.fixer(), new Dynamic<>(NbtOps.INSTANCE, unfixedDataTag), dataVersion, toVersion);

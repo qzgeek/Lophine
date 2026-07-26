@@ -128,6 +128,7 @@ public final class BotGui implements Listener {
         inv.setItem(14,simple(Material.GOLD_INGOT,"perm","权限管理",NamedTextColor.GOLD));
         inv.setItem(15,simple(Material.EXPERIENCE_BOTTLE,"xp","经验",NamedTextColor.GREEN));
         inv.setItem(16,simple(Material.ENDER_PEARL,"tp","传送到我",NamedTextColor.BLUE));
+        inv.setItem(17,simple(Material.BARRIER,"rm","删除假人",NamedTextColor.DARK_RED));
         inv.setItem(18,simple(Material.ARROW,"back_main","返回列表",NamedTextColor.WHITE));
         inv.setItem(26,simple(Material.OAK_DOOR,"close","关闭",NamedTextColor.WHITE));
         for(int i=19;i<=25;i++)inv.setItem(i,border());
@@ -403,7 +404,7 @@ public final class BotGui implements Listener {
             case"xp"->openXP(p,bot);
             case"tp"->{p.closeInventory();p.performCommand("bot "+fn+" tp");}
             case"rm"->openConfirmRemove(p,bot);
-            case"remove_ok"->{p.closeInventory();p.performCommand("bot "+fn+" remove confirm");}
+            case"remove_ok"->{p.closeInventory();BotList.INSTANCE.removeBotPermanently(bot,p);}
             case"give"->{p.closeInventory();AWAIT_GIVE.add(p.getUniqueId());p.sendMessage(t("聊天栏输入目标玩家名转让",NamedTextColor.GREEN));}
             default->{
                 if(act.startsWith("xp:")){handleXp(p,bot,act.substring(3));}

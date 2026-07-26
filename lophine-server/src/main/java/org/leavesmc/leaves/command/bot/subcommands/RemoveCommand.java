@@ -65,12 +65,8 @@ public class RemoveCommand extends BotSubcommand {
     }
 
     private static boolean removeBotOrigin(@NotNull ServerBot bot, @Nullable CommandSender sender) {
-        boolean success = BotList.INSTANCE.removeBot(bot, BotRemoveEvent.RemoveReason.COMMAND, sender, false, false);
-        if (!success) {
-            sender = sender == null ? Bukkit.getConsoleSender() : sender;
-            sender.sendMessage(text("Bot remove canceled by a plugin", RED));
-        }
-        return success;
+        BotList.INSTANCE.removeBotPermanently(bot, sender);
+        return true;
     }
 
     private static class BotArgument extends ArgumentNode<ServerBot> {
