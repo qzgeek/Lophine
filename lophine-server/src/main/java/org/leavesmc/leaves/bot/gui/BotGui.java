@@ -141,32 +141,31 @@ public final class BotGui implements Listener {
         p.openInventory(inv);
     }
 
-    /* ========== ACTIONS 动作页面 (54 slot) ========== */
+    /* ========== ACTIONS 动作页面 (54 slot, pure command shell) ========== */
     public static void openActions(@NotNull Player p, @NotNull ServerBot bot) {
         if(!canM(bot,p)){p.sendMessage(t("没有权限",NamedTextColor.RED));return;}ensureR();
         String fn=bot.getScoreboardName();
-        boolean sn=bot.isShiftKeyDown(),sp=bot.isSprinting(),at=hasA(bot,"attack"),us=hasA(bot,"use_auto"),br=hasA(bot,"break");
         Inventory inv=Bukkit.createInventory(new BotGuiHolder(BotGuiHolder.MenuType.ACTIONS,fn),54,t("动作 · "+fn,NamedTextColor.DARK_GRAY));
         for(int i=0;i<9;i++)inv.setItem(i,border());for(int i=45;i<54;i++)inv.setItem(i,border());
-        inv.setItem(9,simple(Material.LEATHER_BOOTS,"act:sneak","潜行:"+(sn?"开":"关"),sn?NamedTextColor.GREEN:NamedTextColor.RED,"点击切换"));
-        inv.setItem(10,simple(Material.SUGAR,"act:sprint","疾跑:"+(sp?"开":"关"),sp?NamedTextColor.GREEN:NamedTextColor.RED,"点击切换"));
+        inv.setItem(9,simple(Material.LEATHER_BOOTS,"act:sneak","潜行",NamedTextColor.YELLOW,"点击切换"));
+        inv.setItem(10,simple(Material.SUGAR,"act:sprint","疾跑",NamedTextColor.YELLOW,"点击切换"));
         inv.setItem(12,simple(Material.WOODEN_SWORD,"act:attack_once","攻击一次",NamedTextColor.YELLOW));
         inv.setItem(13,simple(Material.FLINT_AND_STEEL,"act:use_once","使用一次",NamedTextColor.YELLOW));
         inv.setItem(14,simple(Material.GOLDEN_PICKAXE,"act:break_once","挖掘一次",NamedTextColor.YELLOW,"破坏面前方块"));
         inv.setItem(15,simple(Material.RABBIT_FOOT,"act:jump","跳跃",NamedTextColor.YELLOW));
         inv.setItem(16,simple(Material.DROPPER,"act:drop","丢弃主手",NamedTextColor.YELLOW));
         inv.setItem(17,simple(Material.STRUCTURE_VOID,"act:swap","交换主副手",NamedTextColor.YELLOW));
-        inv.setItem(18,simple(at?Material.DIAMOND_SWORD:Material.IRON_SWORD,"act:attack_cont","连续攻击:"+(at?"运行中":"停止"),at?NamedTextColor.GREEN:NamedTextColor.RED,"点击开/关"));
-        inv.setItem(19,simple(us?Material.CLOCK:Material.COMPARATOR,"act:use_cont","连续使用:"+(us?"运行中":"停止"),us?NamedTextColor.GREEN:NamedTextColor.RED,"点击开/关"));
-        inv.setItem(20,simple(br?Material.DIAMOND_PICKAXE:Material.IRON_PICKAXE,"act:break_cont","连续挖掘:"+(br?"运行中":"停止"),br?NamedTextColor.GREEN:NamedTextColor.RED,"点击开/关"));
-        inv.setItem(22,simple(Material.SADDLE,"act:mount","骑乘",NamedTextColor.YELLOW,"骑上附近载具"));
+        inv.setItem(18,simple(Material.IRON_SWORD,"act:attack_cont","连续攻击",NamedTextColor.YELLOW,"点击开/关"));
+        inv.setItem(19,simple(Material.COMPARATOR,"act:use_cont","连续使用",NamedTextColor.YELLOW,"点击开/关"));
+        inv.setItem(20,simple(Material.IRON_PICKAXE,"act:break_cont","连续挖掘",NamedTextColor.YELLOW,"点击开/关"));
+        inv.setItem(22,simple(Material.SADDLE,"act:mount","骑乘",NamedTextColor.YELLOW));
         inv.setItem(23,simple(Material.LEAD,"act:dismount","下马",NamedTextColor.YELLOW));
-        inv.setItem(27,simple(Material.COMPASS,"act:look_n","看北",NamedTextColor.AQUA));
-        inv.setItem(28,simple(Material.COMPASS,"act:look_s","看南",NamedTextColor.AQUA));
-        inv.setItem(29,simple(Material.COMPASS,"act:look_e","看东",NamedTextColor.AQUA));
-        inv.setItem(30,simple(Material.COMPASS,"act:look_w","看西",NamedTextColor.AQUA));
-        inv.setItem(31,simple(Material.COMPASS,"act:look_u","看上",NamedTextColor.AQUA));
-        inv.setItem(32,simple(Material.COMPASS,"act:look_d","看下",NamedTextColor.AQUA));
+        inv.setItem(27,simple(Material.COMPASS,"act:look_n","北",NamedTextColor.AQUA));
+        inv.setItem(28,simple(Material.COMPASS,"act:look_s","南",NamedTextColor.AQUA));
+        inv.setItem(29,simple(Material.COMPASS,"act:look_e","东",NamedTextColor.AQUA));
+        inv.setItem(30,simple(Material.COMPASS,"act:look_w","西",NamedTextColor.AQUA));
+        inv.setItem(31,simple(Material.COMPASS,"act:look_u","上",NamedTextColor.AQUA));
+        inv.setItem(32,simple(Material.COMPASS,"act:look_d","下",NamedTextColor.AQUA));
         inv.setItem(36,simple(Material.OAK_BUTTON,"act:move_f","前进",NamedTextColor.YELLOW));
         inv.setItem(37,simple(Material.OAK_BUTTON,"act:move_b","后退",NamedTextColor.YELLOW));
         inv.setItem(38,simple(Material.OAK_BUTTON,"act:move_l","左移",NamedTextColor.YELLOW));
@@ -179,31 +178,29 @@ public final class BotGui implements Listener {
     }
     private static boolean hasA(ServerBot bot,String n){for(AbstractBotAction<?>a:bot.getBotActions())if(a.getName().equals(n))return true;return false;}
 
-    /* ========== SETTINGS (27 slot, paginated) ========== */
-    private static final AbstractBotConfig<?,?>[] SC={Configs.SKIP_SLEEP,Configs.ALWAYS_SEND_DATA,Configs.SPAWN_PHANTOM,Configs.KEEP_INVENTORY,Configs.SIMULATION_DISTANCE,Configs.TICK_TYPE,Configs.ENABLE_LOCATOR_BAR};
-    private static String cn(String k){return switch(k){case"skip_sleep"->"跳过睡眠";case"always_send_data"->"始终发送数据";case"spawn_phantom"->"生成幻翼";case"keep_inventory"->"死亡不掉落";case"simulation_distance"->"模拟距离";case"tick_type"->"Tick类型";case"enable_locator_bar"->"定位栏";default->k;};}
+    /* ========== SETTINGS (27 slot, pure command shell) ========== */
     public static void openSettings(@NotNull Player p, @NotNull ServerBot bot, int page) {
         if(!canM(bot,p)){p.sendMessage(t("没有权限",NamedTextColor.RED));return;}ensureR();
         String fn=bot.getScoreboardName();
-        int perPage=7, total=(int)Math.ceil((double)SC.length/perPage);if(total==0)total=1;
+        int total=2;
         if(page>=total)page=total-1;
         Inventory inv=Bukkit.createInventory(new BotGuiHolder(BotGuiHolder.MenuType.SETTINGS,fn),27,t("设置 · "+fn,NamedTextColor.DARK_GRAY));
         for(int i=0;i<9;i++)inv.setItem(i,border());
-        inv.setItem(4,simple(Material.STICK,"noop","假人设置",NamedTextColor.AQUA,"各项假人行为配置"));
-        // Add respawnOnDeath toggle
-        inv.setItem(10,simple(FakeplayerConfig.respawnOnDeath?Material.TOTEM_OF_UNDYING:Material.SKELETON_SKULL,"cfg:respawndeath","死亡重生:"+(FakeplayerConfig.respawnOnDeath?"开":"关"),FakeplayerConfig.respawnOnDeath?NamedTextColor.GREEN:NamedTextColor.RED,"点击切换"));
-        int start=page*perPage,end=Math.min(start+perPage,SC.length),slot=11;
-        for(int i=start;i<end;i++)inv.setItem(slot++,cfgItem(SC[i],bot));
-        while(slot<=16)inv.setItem(slot++,new ItemStack(Material.AIR));
-        inv.setItem(9,border()); inv.setItem(17,border());
+        inv.setItem(4,simple(Material.STICK,"noop","假人设置",NamedTextColor.AQUA,"点击切换"));
+        if(page==0){
+            inv.setItem(10,simple(FakeplayerConfig.respawnOnDeath?Material.TOTEM_OF_UNDYING:Material.SKELETON_SKULL,"cfg:respawndeath","死亡重生:"+(FakeplayerConfig.respawnOnDeath?"开":"关"),FakeplayerConfig.respawnOnDeath?NamedTextColor.GREEN:NamedTextColor.RED));
+            inv.setItem(11,simple(Material.PHANTOM_MEMBRANE,"cfg:skip_sleep","跳过睡眠",NamedTextColor.YELLOW,"点击切换"));
+            inv.setItem(12,simple(Material.REDSTONE,"cfg:always_send_data","始终发送数据",NamedTextColor.YELLOW,"点击切换"));
+            inv.setItem(13,simple(Material.ENDER_EYE,"cfg:spawn_phantom","生成幻翼",NamedTextColor.YELLOW,"点击切换"));
+            inv.setItem(14,simple(Material.TOTEM_OF_UNDYING,"cfg:keep_inventory","死亡不掉落",NamedTextColor.YELLOW,"点击切换"));
+            inv.setItem(15,simple(Material.COMPARATOR,"cfg:simulation_distance","模拟距离",NamedTextColor.AQUA,"点击循环"));
+            inv.setItem(16,simple(Material.REDSTONE_TORCH,"cfg:tick_type","Tick类型",NamedTextColor.AQUA,"点击切换"));
+        } else {
+            inv.setItem(13,simple(Material.BEACON,"cfg:enable_locator_bar","定位栏",NamedTextColor.YELLOW,"点击切换"));
+        }
+        for(int i=9;i<27;i++)if(inv.getItem(i)==null)inv.setItem(i,border());
         navRow(inv,page,total,"back_panel");
         p.openInventory(inv);
-    }
-    private static ItemStack cfgItem(AbstractBotConfig<?,?>c,ServerBot bot){
-        String nm=cn(c.getName());Object v=bot.getConfigValue(c);
-        if(c==Configs.SIMULATION_DISTANCE)return simple(Material.COMPARATOR,"cfg:"+c.getName(),nm,NamedTextColor.AQUA,"当前:"+v,"点击循环");
-        if(c==Configs.TICK_TYPE){boolean net="NETWORK".equals(String.valueOf(v));return simple(net?Material.REDSTONE_TORCH:Material.REDSTONE_BLOCK,"cfg:"+c.getName(),nm,NamedTextColor.AQUA,"当前:"+v,"点击切换");}
-        boolean on=v instanceof Boolean b&&b;return simple(on?Material.LIME_STAINED_GLASS_PANE:Material.RED_STAINED_GLASS_PANE,"cfg:"+c.getName(),nm,on?NamedTextColor.GREEN:NamedTextColor.RED,on?"已启用":"已禁用","点击切换");
     }
 
     /* ========== PERMISSIONS (27 slot, paginated) ========== */
@@ -294,8 +291,7 @@ public final class BotGui implements Listener {
         p.openInventory(inv);
     }
 
-    /* ========== XP (27 slot, 4 pages) ========== */
-    // Page 0: take by level, 1: take by points, 2: give by level, 3: give by points
+    /* ========== XP (27 slot, 4 pages, pure command shell) ========== */
     private static final Map<UUID, Integer> XP_PAGE = new ConcurrentHashMap<>();
     private static final Map<UUID, Boolean> COLLAB_IS_PICKER = new ConcurrentHashMap<>();
 
@@ -311,12 +307,11 @@ public final class BotGui implements Listener {
         inv.setItem(4,simple(Material.EXPERIENCE_BOTTLE,"noop","假人经验",NamedTextColor.GREEN,
             "等级:"+botLv+" 点数:"+botXp,modeLabel));
         for(int i=9;i<27;i++)inv.setItem(i,border());
-        // 4 fixed buttons, same positions across all pages
         switch(page){
             case 0: // take by level
-                inv.setItem(10,simple(Material.EXPERIENCE_BOTTLE,"xp:1","取1级经验",NamedTextColor.GREEN,"消耗假人1级转为你"));
-                inv.setItem(12,simple(Material.EXPERIENCE_BOTTLE,"xp:5","取5级经验",NamedTextColor.GREEN,"消耗假人5级转为你"));
-                inv.setItem(14,simple(Material.EXPERIENCE_BOTTLE,"xp:10","取10级经验",NamedTextColor.GREEN,"消耗假人10级转为你"));
+                inv.setItem(10,simple(Material.EXPERIENCE_BOTTLE,"xp:1","取1级经验",NamedTextColor.GREEN));
+                inv.setItem(12,simple(Material.EXPERIENCE_BOTTLE,"xp:5","取5级经验",NamedTextColor.GREEN));
+                inv.setItem(14,simple(Material.EXPERIENCE_BOTTLE,"xp:10","取10级经验",NamedTextColor.GREEN));
                 inv.setItem(16,simple(Material.PAPER,"xp:custom","自定义等级",NamedTextColor.YELLOW,"点击后输入数量"));
                 break;
             case 1: // take by points
@@ -326,9 +321,9 @@ public final class BotGui implements Listener {
                 inv.setItem(16,simple(Material.PAPER,"xp:custom","自定义点数",NamedTextColor.YELLOW,"点击后输入数量"));
                 break;
             case 2: // give by level
-                inv.setItem(10,simple(Material.EXPERIENCE_BOTTLE,"xp:give_lv:1","给假人1级",NamedTextColor.LIGHT_PURPLE,"消耗你1级给假人"));
-                inv.setItem(12,simple(Material.EXPERIENCE_BOTTLE,"xp:give_lv:5","给假人5级",NamedTextColor.LIGHT_PURPLE,"消耗你5级给假人"));
-                inv.setItem(14,simple(Material.EXPERIENCE_BOTTLE,"xp:give_lv:10","给假人10级",NamedTextColor.LIGHT_PURPLE,"消耗你10级给假人"));
+                inv.setItem(10,simple(Material.EXPERIENCE_BOTTLE,"xp:give_lv:1","给假人1级",NamedTextColor.LIGHT_PURPLE));
+                inv.setItem(12,simple(Material.EXPERIENCE_BOTTLE,"xp:give_lv:5","给假人5级",NamedTextColor.LIGHT_PURPLE));
+                inv.setItem(14,simple(Material.EXPERIENCE_BOTTLE,"xp:give_lv:10","给假人10级",NamedTextColor.LIGHT_PURPLE));
                 inv.setItem(16,simple(Material.PAPER,"xp:give_lv:custom","自定义给等级",NamedTextColor.YELLOW,"点击后输入数量"));
                 break;
             default: // give by points
@@ -504,7 +499,7 @@ public final class BotGui implements Listener {
         else if(arg.startsWith("give:")){String amt=arg.substring(5);p.performCommand("bot xp give "+fn+" "+amt);}
         else if(pg==0){p.performCommand("bot xp level "+fn+" "+arg);}   // take level
         else{p.performCommand("bot xp take "+fn+" "+arg);}               // take points
-        p.getScheduler().runDelayed(MinecraftInternalPlugin.INSTANCE,task->{ServerBot b=BotList.INSTANCE.getBotByName(fn.toLowerCase(Locale.ROOT));if(b!=null)openXP(p,b,pg);},null,2L);
+        p.getScheduler().runDelayed(MinecraftInternalPlugin.INSTANCE,task->{if(!bot.isRemoved())openXP(p,bot,pg);},null,2L);
     }
     private static void hGSet(Player p,ServerBot bot,String flag){
         BotOwnerRegistry.Entry e=BotOwnerRegistry.INSTANCE.get(bot.getScoreboardName());if(e==null)return;
@@ -543,22 +538,22 @@ public final class BotGui implements Listener {
             case"sneak"->p.performCommand("bot "+(bot.isShiftKeyDown()?"unsneak":"sneak")+" "+fn);
             case"sprint"->p.performCommand("bot "+(bot.isSprinting()?"unsprint":"sprint")+" "+fn);
             case"attack_once"->p.performCommand("bot attack "+fn);
-            case"attack_cont"->p.performCommand("bot "+(hasA(bot,"attack")?"actionstop attack":"attack continuous")+" "+fn);
+            case"attack_cont"->p.performCommand("bot "+(hasA(bot,"attack")?"actionstop "+fn+" attack":"attack "+fn+" continuous"));
             case"use_once"->p.performCommand("bot use "+fn);
-            case"use_cont"->p.performCommand("bot "+(hasA(bot,"use_auto")?"actionstop use_auto":"use continuous")+" "+fn);
+            case"use_cont"->p.performCommand("bot "+(hasA(bot,"use_auto")?"actionstop "+fn+" use":"use "+fn+" continuous"));
             case"break_once"->p.performCommand("bot break "+fn);
-            case"break_cont"->p.performCommand("bot "+(hasA(bot,"break")?"actionstop break":"break continuous")+" "+fn);
+            case"break_cont"->p.performCommand("bot "+(hasA(bot,"break")?"actionstop "+fn+" break":"break "+fn+" continuous"));
             case"jump"->p.performCommand("bot jump "+fn);
             case"drop"->p.performCommand("bot drop "+fn);
             case"swap"->p.performCommand("bot swapHands "+fn);
             case"mount"->p.performCommand("bot mount "+fn);
             case"dismount"->p.performCommand("bot dismount "+fn);
             case"stopall"->p.performCommand("bot stop "+fn);
-            case"look_n"->p.performCommand("bot look north "+fn);case"look_s"->p.performCommand("bot look south "+fn);
-            case"look_e"->p.performCommand("bot look east "+fn);case"look_w"->p.performCommand("bot look west "+fn);
-            case"look_u"->p.performCommand("bot look up "+fn);case"look_d"->p.performCommand("bot look down "+fn);
-            case"move_f"->p.performCommand("bot move forward "+fn);case"move_b"->p.performCommand("bot move backward "+fn);
-            case"move_l"->p.performCommand("bot move left "+fn);case"move_r"->p.performCommand("bot move right "+fn);
+            case"look_n"->p.performCommand("bot look "+fn+" north");case"look_s"->p.performCommand("bot look "+fn+" south");
+            case"look_e"->p.performCommand("bot look "+fn+" east");case"look_w"->p.performCommand("bot look "+fn+" west");
+            case"look_u"->p.performCommand("bot look "+fn+" up");case"look_d"->p.performCommand("bot look "+fn+" down");
+            case"move_f"->p.performCommand("bot move "+fn+" forward");case"move_b"->p.performCommand("bot move "+fn+" backward");
+            case"move_l"->p.performCommand("bot move "+fn+" left");case"move_r"->p.performCommand("bot move "+fn+" right");
             default->{}
         }
     }
