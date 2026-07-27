@@ -621,7 +621,16 @@ public final class PlayerCommand {
     private static Collection<String> getPlayerNameSuggestions() {
         Set<String> names = new LinkedHashSet<>(List.of("Steve", "Alex"));
         for (ServerBot bot : BotList.INSTANCE.bots) {
-            names.add(bot.getBukkitEntity().getName());
+            String n = bot.getBukkitEntity().getName();
+            if (n != null) {
+                names.add(n);
+                if (n.startsWith("BOT_")) names.add(n.substring(4));
+            }
+        }
+        for (BotOwnerRegistry.Entry e : BotOwnerRegistry.INSTANCE.all()) {
+            String fullName = e.fullName;
+            names.add(fullName);
+            if (fullName.startsWith("BOT_")) names.add(fullName.substring(4));
         }
         return names;
     }
@@ -644,6 +653,11 @@ public final class PlayerCommand {
         String playerName = StringArgumentType.getString(context, "player");
         ServerBot bot = BotList.INSTANCE.getBotByName(playerName.toLowerCase(Locale.ROOT));
         if (bot != null) return bot;
+        // Try fullName with BOT_ prefix
+        String fullName = BotUtil.getFullName(playerName);
+        bot = BotList.INSTANCE.getBotByName(fullName.toLowerCase(Locale.ROOT));
+        if (bot != null) return bot;
+        // Try exact player lookup
         org.bukkit.entity.Player p = Bukkit.getPlayerExact(playerName);
         if (p instanceof org.leavesmc.leaves.entity.bot.CraftBot craftBot) {
             return craftBot.getHandle();
