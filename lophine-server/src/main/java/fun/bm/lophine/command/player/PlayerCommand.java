@@ -763,8 +763,13 @@ public final class PlayerCommand {
         }
         if (context.getSource().getSender() instanceof org.bukkit.entity.Player sp && !sp.isOp()) {
             int lim = FakeplayerConfig.perPlayerLimit;
-            if (lim >= 0 && BotOwnerRegistry.INSTANCE.countByOwner(sp.getUniqueId()) >= lim) {
-                sp.sendMessage(Component.text("你的假人数量已达上限 (" + lim + ")", NamedTextColor.RED));
+            if (lim >= 0 && BotOwnerRegistry.INSTANCE.countOnlineByOwner(sp.getUniqueId()) >= lim) {
+                sp.sendMessage(Component.text("你的在线假人数量已达上限 (" + lim + ")，请先下线部分假人后再召唤", NamedTextColor.RED));
+                return true;
+            }
+            int tLim = FakeplayerConfig.totalPlayerLimit;
+            if (tLim >= 0 && BotOwnerRegistry.INSTANCE.countByOwner(sp.getUniqueId()) >= tLim) {
+                sp.sendMessage(Component.text("你的假人总数已达上限 (" + tLim + ")，请先删除部分假人后再创建", NamedTextColor.RED));
                 return true;
             }
         }

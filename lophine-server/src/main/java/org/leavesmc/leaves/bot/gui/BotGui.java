@@ -88,9 +88,11 @@ public final class BotGui implements Listener {
         Inventory inv=Bukkit.createInventory(new BotGuiHolder(BotGuiHolder.MenuType.MAIN,null),27,t("假人列表",NamedTextColor.DARK_GRAY));
         for(int i=0;i<9;i++)inv.setItem(i,border()); // row 1 bg
         int lim=FakeplayerConfig.perPlayerLimit; if(lim<0)lim=99;
-        int cnt=on.size()+(int)off.stream().filter(e->e.isOwner(uid)).count();
+        int tLim=FakeplayerConfig.totalPlayerLimit; if(tLim<0)tLim=99;
+        int onlineCnt=on.size();
+        int allCnt=onlineCnt+(int)off.stream().filter(e->e.isOwner(uid)).count();
         ItemStack hd=item(Material.PLAYER_HEAD,"noop",t(p.getName(),NamedTextColor.GREEN),
-            List.of(t("假人数:"+cnt+"/"+(op?"∞":String.valueOf(lim)),NamedTextColor.GRAY)));
+            List.of(t("在线:"+onlineCnt+"/"+(op?"∞":String.valueOf(lim))+"  总计:"+allCnt+"/"+(op?"∞":String.valueOf(tLim)),NamedTextColor.GRAY)));
         if(hd.getItemMeta() instanceof SkullMeta sm){sm.setOwningPlayer(p);hd.setItemMeta(sm);}inv.setItem(4,hd);
         // content
         int start=page*perPage, end=Math.min(start+perPage,all.size()), slot=10;

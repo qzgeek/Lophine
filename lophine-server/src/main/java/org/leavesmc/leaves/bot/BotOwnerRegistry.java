@@ -96,6 +96,14 @@ public class BotOwnerRegistry {
     public void applyTo(@NotNull ServerBot bot) { Entry e = get(bot.getScoreboardName()); if (e == null) return; if (bot.createPlayer == null && e.owner != null) bot.createPlayer = e.owner; bot.collaborators.addAll(e.collaborators); if (e.publicAccess) bot.collaborators.add(ServerBot.PUBLIC_ACCESS_UUID); }
     public void remove(@NotNull String fn) { if (entries.remove(fn.toLowerCase(Locale.ROOT)) != null) save(); }
     public int countByOwner(@NotNull UUID o) { int c = 0; for (Entry e : entries.values()) if (e.isOwner(o)) c++; return c; }
+    /** Count online bots owned by player (excludes despawned/offline entries) */
+    public int countOnlineByOwner(@NotNull UUID o) {
+        int c = 0;
+        for (Entry e : entries.values()) {
+            if (e.isOwner(o) && BotList.INSTANCE.getBotByName(e.fullName.toLowerCase(java.util.Locale.ROOT)) != null) c++;
+        }
+        return c;
+    }
     public List<Entry> listByOwner(@NotNull UUID o) { List<Entry> l = new ArrayList<>(); for (Entry e : entries.values()) if (e.isOwner(o)) l.add(e); l.sort(Comparator.comparing(a->a.fullName,String.CASE_INSENSITIVE_ORDER)); return l; }
     public List<Entry> all() { List<Entry> l = new ArrayList<>(entries.values()); l.sort(Comparator.comparing(a->a.fullName,String.CASE_INSENSITIVE_ORDER)); return l; }
 }

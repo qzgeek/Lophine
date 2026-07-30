@@ -63,8 +63,12 @@ public class FakeplayerConfig implements IConfigModule {
     public static boolean canModifyConfig = true;
 
     @ConfigInfo(name = "per-player-limit", comments = """
-            Maximum fakeplayers per non-OP player (-1 unlimited)""")
+            Maximum online fakeplayers per non-OP player (-1 unlimited)""")
     public static int perPlayerLimit = 5;
+
+    @ConfigInfo(name = "total-player-limit", comments = """
+            Maximum total fakeplayers (online + offline) per non-OP player (-1 unlimited)""")
+    public static int totalPlayerLimit = 10;
 
     @ConfigInfo(name = "enable-gui", comments = """
             Enable doll-style GUI""")

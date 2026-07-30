@@ -49,7 +49,7 @@ gradle.lifecycle.beforeProject {
     val lophineVersionChannel = providers.gradleProperty("channel").get().trim()
     val lophineBuildNumber = providers.environmentVariable("BUILD_NUMBER").orNull?.trim()?.toInt()
     val versionString = if (lophineBuildNumber == null) {
-        "$mcVersion.local-SNAPSHOT"
+        "$mcVersion"
     } else {
         "$mcVersion.build.$lophineBuildNumber-${lophineVersionChannel.lowercase()}"
     }
