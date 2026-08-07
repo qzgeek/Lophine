@@ -18,7 +18,7 @@ import java.util.Set;
 @ConfigClassInfo(category = EnumConfigCategory.FUNCTION, name = "fakeplayer")
 public class FakeplayerConfig implements IConfigModule {
     @ConfigInfo(name = "enable", comments = """
-            Enable fakeplayer functionality (/bot and /player commands)""")
+            Enable fakeplayer functionality (/bot command)""")
     public static boolean enable = true;
 
     @ConfigInfo(name = "unable-fakeplayer-names", comments = """
@@ -40,6 +40,11 @@ public class FakeplayerConfig implements IConfigModule {
     @ConfigInfo(name = "regen-amount", comments = """
             Regeneration amount for fakeplayers""")
     public static double regenAmount = 0.0;
+
+    @ConfigInfo(name = "open-action-gui", comments = """
+            Allow opening fakeplayer action gui,
+            need sneak to open if you enabled inventory open gui""")
+    public static boolean canOpenActionGui = false;
 
     @ConfigInfo(name = "resident-fakeplayer", comments = """
             Allow fakeplayers to persist across restarts""")

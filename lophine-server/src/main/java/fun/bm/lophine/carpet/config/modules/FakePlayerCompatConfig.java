@@ -15,11 +15,11 @@ import java.util.Set;
         directory = {"carpet"},
         comments = """
                 Carpet fakeplayer compatibility mapped onto Lophine fakeplayers.
-                /player command is registered by FakeplayerConfig using the legacy NMS brigadier PlayerCommand."""
+                /bot command is registered by FakeplayerConfig using the legacy NMS brigadier PlayerCommand."""
 )
 public class FakePlayerCompatConfig implements IConfigModule {
     @ConfigInfo(name = "commandPlayer", comments = """
-            Enable /player command.(not remapped)
+            Enable /bot command.(not remapped)
             If you want to enable bot command, please see lophine global config.""")
     public static boolean commandPlayer = false;
 
@@ -65,11 +65,11 @@ public class FakePlayerCompatConfig implements IConfigModule {
 
     @Override
     public void onLoaded(CommentedFileConfig configInstance, @Nullable Set<Exception> exs) {
-        // /player command is now registered by FakeplayerConfig using legacy NMS brigadier PlayerCommand
+        // /bot command is now registered by FakeplayerConfig using legacy NMS brigadier PlayerCommand
     }
 
     @Override
     public void onUnloaded(CommentedFileConfig configInstance) {
-        // /player command unregistration handled by FakeplayerConfig
+        // /bot command unregistration handled by FakeplayerConfig
     }
 }

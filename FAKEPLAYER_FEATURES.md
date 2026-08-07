@@ -1,196 +1,288 @@
-# Lophine 假人功能文档
+# Lophine 假人改版文档
 
-> 基于 Lophine 26.1.2（Folia fork）的假人 GUI 管理系统，提供 PlayerDoll 风格的完整假人操控体验。
+> 基于 Lophine 26.1.2 的假人改版说明。当前实现的核心原则是：GUI 只做薄壳，真正的权限与行为都落在 `/bot` 命令层。
 
-## 仓库地址
+## 先看结论
 
-https://github.com/qzgeek/Lophine/tree/26.1.2-doll-v2
+- 当前主入口是 `/bot`
+- 推荐的命令顺序是：`/bot <动作> <名字> [参数]`
+- GUI 只负责发命令，不直接改 bot 状态
+- 假人列表同时包含在线 bot 和离线持久化记录
+- 权限系统是“主人/管理员 > 个人权限(PSet) > 公开权限(GSet) > 拒绝”
+- 经验系统内部只存总经验点数，等级实时反推
+
+## 当前仓库里的核心文件
+
+- `lophine-server/src/main/java/fun/bm/lophine/command/player/PlayerCommand.java`
+- `lophine-server/src/main/java/org/leavesmc/leaves/bot/gui/BotGui.java`
+- `lophine-server/src/main/java/org/leavesmc/leaves/bot/gui/BotGuiHolder.java`
+- `lophine-server/src/main/java/org/leavesmc/leaves/bot/BotList.java`
+- `lophine-server/src/main/java/org/leavesmc/leaves/bot/BotOwnerRegistry.java`
+- `lophine-server/src/main/java/org/leavesmc/leaves/bot/ServerBot.java`
+- `lophine-server/src/main/java/fun/bm/lophine/config/modules/function/FakeplayerConfig.java`
+- `lophine-server/src/main/java/fun/bm/lophine/carpet/config/modules/FakePlayerCompatConfig.java`
 
 ## 快速开始
 
-```
-/bot                  # 打开假人管理 GUI
-/bot <名字> spawn      # 创建一个假人
-/bot help             # 查看所有命令
+```bash
+/bot
+/bot help
+/bot spawn test
+/bot menu test
 ```
 
-蹲下 + 空手右键假人 → 直接打开控制面板。
+快捷操作：
 
-## 核心命令
+- 蹲下 + 空手右键假人：打开控制面板
+- GUI 的所有按钮：最终都会转成 `/bot ...` 命令
+
+## 命令总览
+
+### 1) 入口与帮助
 
 | 命令 | 说明 |
-|------|------|
-| `/bot` | 打开假人管理主界面（列表） |
+|---|---|
+| `/bot` | 打开假人列表主界面 |
 | `/bot gui` | 同上 |
-| `/bot help` | 查看中文帮助 |
-| `/bot <名字> spawn` | 召唤假人 |
-| `/bot <名字> kill` | 杀死假人 |
-| `/bot <名字> menu` | 打开该假人的控制面板 |
-| `/bot <名字> echest` | 打开假人末影箱 |
-| `/bot <名字> tp` | 传送假人到身边 |
+| `/bot help [页码]` | 打开帮助，当前共 3 页 |
 
-### 动作控制
+### 2) 创建、召回、删除
 
 | 命令 | 说明 |
-|------|------|
-| `/bot <名> sneak / unsneak` | 切换潜行 |
-| `/bot <名> sprint / unsprint` | 切换疾跑 |
-| `/bot <名> attack [continuous]` | 攻击（连续） |
-| `/bot <名> use [continuous]` | 使用物品 |
-| `/bot <名> break [continuous]` | 挖掘 |
-| `/bot <名> jump` | 跳跃 |
-| `/bot <名> drop` | 丢弃主手物品 |
-| `/bot <名> swapHands` | 交换主副手 |
-| `/bot <名> mount / dismount` | 骑乘/下马 |
-| `/bot <名> look <方向>` | 看向方向(north/south/east/west/up/down) |
-| `/bot <名> move <方向>` | 移动(forward/backward/left/right) |
-| `/bot <名> stop` | 停止所有动作 |
-| `/bot <名> actionstop <动作>` | 停止指定动作 |
+|---|---|
+| `/bot spawn <名字>` | 召唤假人 |
+| `/bot spawn <名字> time <秒>` | 延迟召唤 |
+| `/bot kill <名字>` | 终止假人（非彻底删除） |
+| `/bot remove <名字>` | 彻底删除假人，数据不可恢复 |
+| `/bot menu <名字>` | 打开该假人的控制面板 |
+| `/bot tp <名字>` | 把假人传送到自己身边 |
+| `/bot echest <名字>` | 打开假人的末影箱 |
+| `/bot inventory <名字>` | 打开假人的背包界面 |
+| `/bot save <名字>` | 保存为可恢复数据 |
+| `/bot load <名字>` | 从可恢复数据加载 |
 
-### 经验系统
+说明：
 
-| 命令 | 说明 |
-|------|------|
-| `/bot <名> xp take <点数>` | 从假人取经验点数 |
-| `/bot <名> xp level <等级>` | 从假人取经验等级 |
-| `/bot <名> xp give <点数>` | 给假人经验点数 |
-| `/bot <名> xp level give <等级>` | 给假人经验等级（从自己扣除） |
+- `kill` 只是“下线/终止”语义
+- `remove` 才是彻底删除，会清数据文件并移除所有权记录
+- 主面板里的“删除该假人”对应的是彻底删除
 
-**经验运算规则**：
-- 假人内部只存储 `totalExperience`（经验点数），等级和进度实时推算
-- 等级换算使用 Minecraft Wiki 纯整数公式，零浮点误差
-- 存取用同一 XP 值，严格守恒
-- 公式：0-16级: `L²+6L`，17-31级: `(5L²-81L+720)/2`，32+级: `(9L²-325L+4440)/2`
-
-### 权限与协作者
+### 3) 动作控制
 
 | 命令 | 说明 |
-|------|------|
-| `/bot <名> col add <玩家>` | 添加协作者 |
-| `/bot <名> col remove <玩家>` | 移除协作者 |
-| `/bot <名> col list` | 查看协作者列表 |
+|---|---|
+| `/bot sneak <名字>` / `/bot unsneak <名字>` | 切换潜行 |
+| `/bot sprint <名字>` / `/bot unsprint <名字>` | 切换疾跑 |
+| `/bot attack <名字> [continuous]` | 攻击 |
+| `/bot use <名字> [continuous]` | 使用物品 |
+| `/bot break <名字> [continuous]` | 挖掘 |
+| `/bot jump <名字>` | 跳跃 |
+| `/bot drop <名字>` | 丢弃主手物品 |
+| `/bot swapHands <名字>` | 交换主副手 |
+| `/bot mount <名字>` | 骑乘 |
+| `/bot dismount <名字>` | 下马 |
+| `/bot look <名字> <north/south/east/west/up/down>` | 看向方向 |
+| `/bot look <名字> at <坐标>` | 看向指定坐标 |
+| `/bot turn <名字> <left/right/back/rotation>` | 转身 |
+| `/bot move <名字> <forward/backward/left/right>` | 移动 |
+| `/bot stop <名字>` | 停止所有动作 |
+| `/bot actionstop <名字> <动作>` | 停止指定动作 |
+| `/bot hotbar <名字> <1-9>` | 切换快捷栏 |
 
-权限管理通过 GUI「权限管理」页面操作，支持：
-- **公开权限(GSet)**：15 项精细权限控制（背包/末影箱/攻击/使用/挖掘/潜行/疾跑/跳跃/丢弃/换手/骑乘/下马/移动/视角/传送/设置/经验/下线/删除/召唤）
-- **个人权限(PSet)**：每位协作者独立的权限覆写
-- 支持从在线玩家列表直接添加协作者
+这里最重要的一点是：参数顺序是“动作 → 名字 → 参数”，不是“名字 → 动作”。
 
-### 设置项
+### 4) 经验系统
 
-每个假人支持独立配置：
-- 跳过睡眠 (skip_sleep)
-- 始终发送数据 (always_send_data)
-- 生成幻翼 (spawn_phantom)
-- 死亡不掉落 (keep_inventory)
-- 模拟距离 (simulation_distance)
-- Tick 类型 (tick_type: ENTITY_LIST/NETWORK)
-- 定位栏 (enable_locator_bar)
-- 死亡重生 (respawn_on_death)
+| 命令 | 说明 |
+|---|---|
+| `/bot xp <名字> take <点数>` | 从假人取经验点数 |
+| `/bot xp <名字> level <等级>` | 从假人取经验等级 |
+| `/bot xp <名字> give <点数>` | 给假人经验点数 |
+| `/bot xp <名字> level give <等级>` | 给假人经验等级 |
+| `/bot xp <名字> clear` | 清空经验 |
 
-## GUI 系统
+经验系统的实现要点：
 
-### 假人列表（27 格）
-- 显示玩家头像、假人数量/上限
-- 在线假人头像 + 离线假人骷髅头
-- 支持分页浏览
-- "+ 创建假人" 按钮 → 聊天栏输入名字即创建
+- 假人内部保存的是 `totalExperience`
+- 等级和进度是实时推算出来的
+- 取/给等级时，最终都会折算成经验点数
+- GUI 里的 4 个 XP 页面分别是：取级、取点、给级、给点
 
-### 假人主菜单（27 格）
-- 假人信息：名称、生命、饱食度、位置、主人
-- 功能入口：背包/末影箱/动作/设置/权限/经验/传送/删除
+### 5) 配置与协作者
 
-### 动作面板（54 格）
-- 状态切换：潜行、疾跑
-- 单次动作：攻击/使用/挖掘/跳跃/丢弃/换手
-- 连续动作：连续攻击/使用/挖掘（可开关，用 actionstop 停止）
-- 特殊动作：骑乘/下马
-- 视角控制：6 方向
-- 移动控制：4 方向
-- 停止全部
+| 命令 | 说明 |
+|---|---|
+| `/bot config <名字>` | 打开假人配置面板 |
+| `/bot config <名字> <setting> <value>` | 直接修改配置 |
+| `/bot col <名字> add <玩家>` | 添加协作者 |
+| `/bot col <名字> remove <玩家>` | 移除协作者 |
+| `/bot col <名字> list` | 查看协作者列表 |
 
-### 经验页面（27 格，4 页分页）
-- 第 1 页：按等级取经验（1/5/10 级 + 自定义）
-- 第 2 页：按点数取经验（100/500/1000 点 + 自定义）
-- 第 3 页：按等级给经验（1/5/10 级 + 自定义）
-- 第 4 页：按点数给经验（100/500/1000 点 + 自定义）
+补充说明：
 
-### 设置页面（27 格，分页）
-- 死亡重生开关
-- 各项假人配置循环切换
+- `col add/remove` 都支持 `all`，表示公开访问或全部移除
+- 不能把主人自己加成协作者
+- 协作者列表和公开访问都会同步进 `BotOwnerRegistry`
 
-### 权限管理（27 格，分页）
-- 公开权限管理入口
-- 协作者头像列表（潜行点击移除）
-- 点击协作者进入个人精细权限页面
-- "添加在线玩家" 按钮打开在线玩家选择器
+## GUI 结构
 
-## 技术架构
+### 假人列表
 
-### 文件结构
+- 27 格布局
+- 显示在线 bot 和离线持久化记录
+- 在线 bot 来自 `BotList.INSTANCE.bots`
+- 离线 bot 来自 `BotOwnerRegistry.INSTANCE`
+- `+ 创建假人` 会让玩家在聊天栏输入名字
 
-```
-lophine-server/src/main/java/
-├── fun/bm/lophine/
-│   ├── command/player/PlayerCommand.java   # /bot 命令注册和执行
-│   ├── config/modules/function/
-│   │   └── FakeplayerConfig.java           # 假人全局配置
-│   └── carpet/config/modules/
-│       └── FakePlayerCompatConfig.java      # Carpet 兼容配置
-└── org/leavesmc/leaves/bot/
-    ├── BotList.java                        # 假人列表管理（钩子）
-    ├── BotOwnerRegistry.java               # 所有权+权限持久化
-    ├── ServerBot.java                      # 假人实体（interact 拦截）
-    └── gui/
-        ├── BotGui.java                     # GUI 完整系统
-        └── BotGuiHolder.java              # GUI 容器
-```
+### 控制面板
 
-### 关键修改点
+- 27 格布局，分页
+- 第 1 页：背包、末影箱、动作、设置、权限管理、经验、传送到我
+- 第 2 页：删除该假人
 
-1. **ServerBot.interact()**：蹲下+空手右键时返回 PASS，防止打开原版背包
-2. **BotGui.onInteractBot()**：OFF_HAND 事件处理，打开管理面板
-3. **BotList**：构造函数初始化 BotOwnerRegistry + 创建时记录所有权 + 放置时恢复
-4. **BotOwnerRegistry**：NBT 格式持久化所有权、协作者、GSet/PSet 权限标志
-5. **GUI 点击处理器**：所有按钮操作转发为 `/bot` 命令，GUI 作为薄壳
+### 动作面板
 
-### XP 计算原理
+- 54 格布局
+- 直接转发成 `/bot` 命令
+- 不读取 bot 内部状态做“伪同步显示”
 
-所有 XP 操作均转换为基础点数运算：
+### 设置面板
 
-```
-取 N 级经验：xpCost = totalXpForLevel(botLevel) - totalXpForLevel(botLevel - N)
-给 N 级经验：xpCost = totalXpForLevel(playerLevel) - totalXpForLevel(playerLevel - N)
-```
+- 27 格布局，分页
+- 主要切换：死亡重生、跳过睡眠、始终发送数据、生成幻翼、死亡不掉落、模拟距离、Tick 类型、定位栏
 
-- 假人扣除/增加 `xpCost` 后调用 `recalcBotLevel()` 重新推算等级
-- 玩家端使用 `giveExp(xpCost)` 精确增减点数
-- 公式来源：Minecraft Wiki，纯整数运算，零浮点误差
+### 权限管理
 
-### 配置项参考
+- 27 格布局，分页
+- 支持公开权限(GSet)
+- 支持每个协作者的个人权限(PSet)
+- 支持在线玩家选择器添加协作者
 
-配置从 `lophine_global_config.toml` 的 `[function.fakeplayer]` 段和 `lophine_carpet_config.toml` 的 `[carpet.fakeplayer]` 段加载。
+## 权限模型
 
-推荐配置：
+权限判断顺序：
 
-```toml
-[function.fakeplayer]
-prefix = "BOT_"
-limit = 100
-per-player-limit = 5
-enable-gui = true
-shortcut-enabled = true
-resident-fakeplayer = true
-manual-save-and-load = true
-open-fakeplayer-inventory = true
-can-modify-config = true
-respawn-on-death = true
-```
+1. 主人 / OP
+2. PSet：个人权限
+3. GSet：公开权限
+4. 默认拒绝
 
-```toml
-[carpet.fakeplayer]
-fakePlayerTicksLikeRealPlayer = false   # 必须为 false，否则假人无法交互
-commandBot = true
-commandPlayer = true
-fakePlayerResident = true
-openFakePlayerInventory = true
-```
+当前 20 个权限标志：
+
+`inv, echest, attack, use, break, sneak, sprint, jump, drop, swap, mount, dismount, move, look, tp, set, xp, despawn, remove, spawn`
+
+含义简述：
+
+- `inv` / `echest` / `xp` / `set` / `spawn` / `remove` / `despawn`
+- 以及动作类权限：攻击、使用、挖掘、潜行、疾跑、跳跃、丢弃、换手、骑乘、下马、移动、视角、传送
+
+特别约束：
+
+- 不能把自己添加为协作者
+- 公开访问开关和协作者变更都会写回 `BotOwnerRegistry`
+
+## 数据持久化
+
+当前主要数据文件都放在 `world/lophine_config/` 下：
+
+- `bot_owners.dat`：所有权、协作者、GSet/PSet
+- `bot_configs/<uuid>.dat`：假人配置
+- `bot_inventory/<uuid>.dat`：背包、装备、经验
+- `fakeplayerdata/`：手动保存数据
+- `resume_fakeplayerdata/`：自动恢复数据
+
+说明：
+
+- `kill` 不等于彻底删除
+- `remove` 才会清掉所有关联数据
+- 只有启用 resident / 手动保存时，假人才会在重启后恢复
+
+## 关键代码机制
+
+### 1) ServerBot.interact() 的空手蹲下拦截
+
+这是防止原版玩家背包自动打开的关键：
+
+- 玩家蹲下
+- 主手空手
+- 右键假人
+- `ServerBot.interact()` 返回 `PASS`
+
+这样 GUI 才能接管交互。
+
+### 2) GUI 作为薄壳
+
+所有按钮最终都调用 `player.performCommand(...)`，例如：
+
+- `bot attack test continuous`
+- `bot look test north`
+- `bot move test forward`
+- `bot actionstop test attack`
+- `bot xp test take 10`
+
+GUI 不直接改 bot 的内部行动队列。
+
+### 3) 名字处理
+
+代码里同时处理两种名字：
+
+- raw name：玩家输入的原名
+- full name：`prefix + rawName + suffix`
+
+这样可以避免 `BOT_` 前缀导致的查找和命令失配。
+
+### 4) XP 页面页码状态
+
+`PANEL` 和 `XP` 共用同一种容器类型，所以代码里用 `XP_PAGE` 单独区分上下文。
+
+注意三处必须清理：
+
+- 关闭窗口
+- 返回面板
+- 返回列表
+
+否则“下一页”会串到 XP 页面。
+
+## 重要坑位
+
+### 1) `fakePlayerTicksLikeRealPlayer = true` 会让假人“只挨打不干活”
+
+这是最常见的误判。
+
+如果这个开关开着，bot 会走网络 tick 路径，`runAction()` 和 `doTick()` 可能被跳过，表现就是：
+
+- 能受伤
+- 不能交互
+- 不能推挤
+- 动作不执行
+
+排查顺序里，这一条要放第一位。
+
+### 2) GUI 和命令层必须保持对等
+
+不要让 GUI 做命令层做不到的事，也不要让命令层有 GUI 没有的能力却不补入口。
+
+### 3) 如果看到旧入口写法
+
+以当前实现为准，主入口应按 `/bot` 理解。
+
+## 经验页的交互方式
+
+- 点按钮：直接发命令
+- 选“自定义”：聊天栏输入数字
+- 4 个页面分别对应取级 / 取点 / 给级 / 给点
+
+## 配置项建议
+
+如果你只想要“当前这套改版”的基本可用配置，至少保证：
+
+- GUI 开启
+- 快捷键开启
+- 假人上限合理
+- `fakePlayerTicksLikeRealPlayer = false`
+- `respawnOnDeath` 按需要设置
+
+## 这份文档和代码的对应关系
+
+这份文档对应的是当前仓库里的实际实现，不是旧版 Leaves 的说明。
+如果以后再改命令树、GUI 布局或权限模型，优先先改代码，再同步更新这里和帮助文本。

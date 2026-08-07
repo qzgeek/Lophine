@@ -180,17 +180,17 @@ public class BotConfigMenu implements Listener {
             player.sendMessage(
                 Component.text("选择模拟距离：", NamedTextColor.GOLD)
                     .append(Component.text(" [4]", NamedTextColor.YELLOW, TextDecoration.BOLD)
-                        .clickEvent(ClickEvent.runCommand("/player " + botName + " config simulation_distance 4")))
+                        .clickEvent(ClickEvent.runCommand("/bot " + botName + " config simulation_distance 4")))
                     .append(Component.text(" [8]", NamedTextColor.YELLOW, TextDecoration.BOLD)
-                        .clickEvent(ClickEvent.runCommand("/player " + botName + " config simulation_distance 8")))
+                        .clickEvent(ClickEvent.runCommand("/bot " + botName + " config simulation_distance 8")))
                     .append(Component.text(" [12]", NamedTextColor.YELLOW, TextDecoration.BOLD)
-                        .clickEvent(ClickEvent.runCommand("/player " + botName + " config simulation_distance 12")))
+                        .clickEvent(ClickEvent.runCommand("/bot " + botName + " config simulation_distance 12")))
                     .append(Component.text(" [16]", NamedTextColor.YELLOW, TextDecoration.BOLD)
-                        .clickEvent(ClickEvent.runCommand("/player " + botName + " config simulation_distance 16")))
+                        .clickEvent(ClickEvent.runCommand("/bot " + botName + " config simulation_distance 16")))
                     .append(Component.text(" [32]", NamedTextColor.YELLOW, TextDecoration.BOLD)
-                        .clickEvent(ClickEvent.runCommand("/player " + botName + " config simulation_distance 32")))
+                        .clickEvent(ClickEvent.runCommand("/bot " + botName + " config simulation_distance 32")))
                     .append(Component.text(" [默认]", NamedTextColor.GRAY)
-                        .clickEvent(ClickEvent.runCommand("/player " + botName + " config simulation_distance -1")))
+                        .clickEvent(ClickEvent.runCommand("/bot " + botName + " config simulation_distance -1")))
             );
         } else if (config == Configs.TICK_TYPE) {
             ServerBot.TickType current = (ServerBot.TickType) botConfig.getValue();

@@ -20,6 +20,8 @@ package org.leavesmc.leaves.bot;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.authlib.GameProfile;
 import fun.bm.lophine.LophineLogger;
+import fun.bm.lophine.bot.BotActionGuiContainer;
+import fun.bm.lophine.bot.BotActionGuiMenu;
 import fun.bm.lophine.carpet.config.modules.FakePlayerCompatConfig;
 import fun.bm.lophine.config.modules.function.FakeplayerConfig;
 import io.papermc.paper.adventure.PaperAdventure;
@@ -44,8 +46,6 @@ import net.minecraft.stats.Stat;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.effect.MobEffectInstance;
-import org.bukkit.event.entity.EntityPotionEffectEvent;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -363,6 +363,15 @@ public class ServerBot extends ServerPlayer {
     @Override
     public @NotNull InteractionResult interact(@NotNull Player player, @NotNull InteractionHand hand, @NotNull net.minecraft.world.phys.Vec3 location) {
         if (player.isShiftKeyDown() && player.getMainHandItem().isEmpty()) {
+            if (FakeplayerConfig.canOpenActionGui && player instanceof ServerPlayer player1) {
+                BotActionGuiOpenEvent event = new BotActionGuiOpenEvent(this.getBukkitEntity(), player1.getBukkitEntity());
+                getServer().server.getPluginManager().callEvent(event);
+                if (!event.isCancelled()) {
+                    BotActionGuiContainer container = new BotActionGuiContainer(this.getBukkitEntity(), player1.getBukkitEntity());
+                    player.openMenu(new SimpleMenuProvider((i, inventory, p) -> new BotActionGuiMenu(i, inventory, container), this.getDisplayName()));
+                    return InteractionResult.SUCCESS;
+                }
+            }
             return InteractionResult.PASS; // GUI handles this on the Bukkit event layer
         }
         if (FakePlayerCompatConfig.openFakePlayerInventory) {
@@ -481,10 +490,10 @@ public class ServerBot extends ServerPlayer {
                 try {
                     String configName = configTag.getString("configName")
                             .orElseThrow(() -> new IllegalArgumentException("Missing configName"));
-                    AbstractBotConfig<?, ?> botConfig = this.configs.get(configName);
-                    if (botConfig != null) {
-                        botConfig.setBot(this);
-                        botConfig.load(configTag);
+                    AbstractBotConfig<?, ?> config = Configs.getConfig(configName);
+                    if (config != null) {
+                        config.setBot(this);
+                        config.load(configTag);
                     }
                 } catch (RuntimeException exception) {
                     LophineLogger.LOGGER.warn("Skipped invalid saved config for bot {}", this.getScoreboardName(), exception);
@@ -539,9 +548,6 @@ public class ServerBot extends ServerPlayer {
 
     @Override
     public void die(@NotNull DamageSource damageSource) {
-        if (this.isRemoved() || this.dead) return;
-        this.dead = true;
-
         boolean flag = this.level().getGameRules().get(GameRules.SHOW_DEATH_MESSAGES);
         Component defaultMessage = this.getCombatTracker().getDeathMessage();
 
@@ -671,44 +677,6 @@ public class ServerBot extends ServerPlayer {
         return ProjectileUtil.getEntityHitResult(entity, vec3, viewEnd, aABB, EntitySelector.CAN_BE_PICKED, d1);
     }
 
-    @Override
-    public ItemEntity drop(ItemStack itemStack, boolean randomly, boolean thrownFromHand, boolean callEvent, java.util.function.@Nullable Consumer<org.bukkit.entity.Item> entityOperation) {
-        // Bots should not fire PlayerDropItemEvent - create item entity directly
-        if (itemStack.isEmpty()) {
-            return null;
-        } else if (this.level().isClientSide()) {
-            this.swing(InteractionHand.MAIN_HAND);
-            return null;
-        } else {
-            double yHandPos = this.getEyeY() - 0.3F;
-            ItemEntity entity = new ItemEntity(this.level(), this.getX(), yHandPos, this.getZ(), itemStack);
-            entity.setPickUpDelay(40);
-            if (thrownFromHand) {
-                entity.setThrower(this);
-            }
-            if (randomly) {
-                float pow = this.random.nextFloat() * 0.5F;
-                float dir = this.random.nextFloat() * (float) (Math.PI * 2);
-                entity.setDeltaMovement(-Mth.sin(dir) * pow, 0.2F, Mth.cos(dir) * pow);
-            } else {
-                float pow = 0.3F;
-                float sinX = Mth.sin(this.getXRot() * Mth.DEG_TO_RAD);
-                float cosX = Mth.cos(this.getXRot() * Mth.DEG_TO_RAD);
-                float sinY = Mth.sin(this.getYRot() * Mth.DEG_TO_RAD);
-                float cosY = Mth.cos(this.getYRot() * Mth.DEG_TO_RAD);
-                float dir = this.random.nextFloat() * (float) (Math.PI * 2);
-                float pow2 = 0.02F * this.random.nextFloat();
-                entity.setDeltaMovement(
-                    -sinY * cosX * 0.3F + Math.cos(dir) * pow2,
-                    -sinX * 0.3F + 0.1F + (this.random.nextFloat() - this.random.nextFloat()) * 0.1F,
-                    cosY * cosX * 0.3F + Math.sin(dir) * pow2
-                );
-            }
-            this.level().addFreshEntity(entity);
-            return entity;
-        }
-    }
-
     public void dropAll(boolean death) {
         NonNullList<ItemStack> items = this.getInventory().getNonEquipmentItems();
         for (int i = 0; i < items.size(); i++) {
@@ -818,12 +786,6 @@ public class ServerBot extends ServerPlayer {
 
     public net.minecraft.world.entity.EntityEquipment getBotEquipment() {
         return equipment;
-    }
-
-    @Override
-    public boolean addEffect(MobEffectInstance newEffect, @Nullable Entity source, EntityPotionEffectEvent.Cause cause, boolean fireEvent) {
-        if (this.isRemoved() || this.dead) return false;
-        return super.addEffect(newEffect, source, cause, fireEvent);
     }
 
     public BotInventoryContainer getBotContainer() {
