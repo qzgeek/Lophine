@@ -142,9 +142,11 @@
 
 ### 动作面板
 
-- 54 格布局
-- 直接转发成 `/bot` 命令
-- 不读取 bot 内部状态做“伪同步显示”
+- 使用上游 `BotActionGuiContainer/BotActionGuiMenu`
+- 54 格布局，先选择 Start / Stop
+- Start 模式按动作树逐层选择并执行命令
+- Stop 模式列出当前运行中的动作，可按动作 UUID 停止
+- 控制面板里的“动作”按钮现在直接打开这套上游动作 GUI
 
 ### 设置面板
 

@@ -1,5 +1,7 @@
 package org.leavesmc.leaves.bot.gui;
 
+import fun.bm.lophine.bot.BotActionGuiContainer;
+import fun.bm.lophine.bot.BotActionGuiMenu;
 import fun.bm.lophine.config.modules.function.FakeplayerConfig;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -143,40 +145,18 @@ public final class BotGui implements Listener {
         p.openInventory(inv);
     }
 
-    /* ========== ACTIONS 动作页面 (54 slot, pure command shell) ========== */
+    /* ========== ACTIONS 动作页面（上游 GUI） ========== */
     public static void openActions(@NotNull Player p, @NotNull ServerBot bot) {
         if(!canM(bot,p)){p.sendMessage(t("没有权限",NamedTextColor.RED));return;}ensureR();
-        String fn=bot.getScoreboardName();
-        Inventory inv=Bukkit.createInventory(new BotGuiHolder(BotGuiHolder.MenuType.ACTIONS,fn),54,t("动作 · "+fn,NamedTextColor.DARK_GRAY));
-        for(int i=0;i<9;i++)inv.setItem(i,border());for(int i=45;i<54;i++)inv.setItem(i,border());
-        inv.setItem(9,simple(Material.LEATHER_BOOTS,"act:sneak","潜行",NamedTextColor.YELLOW,"点击切换"));
-        inv.setItem(10,simple(Material.SUGAR,"act:sprint","疾跑",NamedTextColor.YELLOW,"点击切换"));
-        inv.setItem(12,simple(Material.WOODEN_SWORD,"act:attack_once","攻击一次",NamedTextColor.YELLOW));
-        inv.setItem(13,simple(Material.FLINT_AND_STEEL,"act:use_once","使用一次",NamedTextColor.YELLOW));
-        inv.setItem(14,simple(Material.GOLDEN_PICKAXE,"act:break_once","挖掘一次",NamedTextColor.YELLOW,"破坏面前方块"));
-        inv.setItem(15,simple(Material.RABBIT_FOOT,"act:jump","跳跃",NamedTextColor.YELLOW));
-        inv.setItem(16,simple(Material.DROPPER,"act:drop","丢弃主手",NamedTextColor.YELLOW));
-        inv.setItem(17,simple(Material.STRUCTURE_VOID,"act:swap","交换主副手",NamedTextColor.YELLOW));
-        inv.setItem(18,simple(Material.IRON_SWORD,"act:attack_cont","连续攻击",NamedTextColor.YELLOW,"点击开/关"));
-        inv.setItem(19,simple(Material.COMPARATOR,"act:use_cont","连续使用",NamedTextColor.YELLOW,"点击开/关"));
-        inv.setItem(20,simple(Material.IRON_PICKAXE,"act:break_cont","连续挖掘",NamedTextColor.YELLOW,"点击开/关"));
-        inv.setItem(22,simple(Material.SADDLE,"act:mount","骑乘",NamedTextColor.YELLOW));
-        inv.setItem(23,simple(Material.LEAD,"act:dismount","下马",NamedTextColor.YELLOW));
-        inv.setItem(27,simple(Material.COMPASS,"act:look_n","北",NamedTextColor.AQUA));
-        inv.setItem(28,simple(Material.COMPASS,"act:look_s","南",NamedTextColor.AQUA));
-        inv.setItem(29,simple(Material.COMPASS,"act:look_e","东",NamedTextColor.AQUA));
-        inv.setItem(30,simple(Material.COMPASS,"act:look_w","西",NamedTextColor.AQUA));
-        inv.setItem(31,simple(Material.COMPASS,"act:look_u","上",NamedTextColor.AQUA));
-        inv.setItem(32,simple(Material.COMPASS,"act:look_d","下",NamedTextColor.AQUA));
-        inv.setItem(36,simple(Material.OAK_BUTTON,"act:move_f","前进",NamedTextColor.YELLOW));
-        inv.setItem(37,simple(Material.OAK_BUTTON,"act:move_b","后退",NamedTextColor.YELLOW));
-        inv.setItem(38,simple(Material.OAK_BUTTON,"act:move_l","左移",NamedTextColor.YELLOW));
-        inv.setItem(39,simple(Material.OAK_BUTTON,"act:move_r","右移",NamedTextColor.YELLOW));
-        inv.setItem(44,simple(Material.BARRIER,"act:stopall","停止全部动作",NamedTextColor.DARK_RED));
-        inv.setItem(45,simple(Material.ARROW,"back_panel","返回面板",NamedTextColor.WHITE));
-        inv.setItem(52,simple(Material.COMPASS,"back_main","返回列表",NamedTextColor.WHITE));
-        inv.setItem(53,simple(Material.OAK_DOOR,"close","关闭",NamedTextColor.WHITE));
-        p.openInventory(inv);
+        p.closeInventory();
+        org.bukkit.craftbukkit.entity.CraftPlayer cp = (org.bukkit.craftbukkit.entity.CraftPlayer) p;
+        BotActionGuiContainer actionContainer = new BotActionGuiContainer(bot.getBukkitEntity(), cp);
+        ((net.minecraft.server.level.ServerPlayer) cp.getHandle()).openMenu(
+                new net.minecraft.world.SimpleMenuProvider(
+                        (i, inventory, pl) -> new BotActionGuiMenu(i, inventory, actionContainer),
+                        bot.getDisplayName()
+                )
+        );
     }
     private static boolean hasA(ServerBot bot,String n){for(AbstractBotAction<?>a:bot.getBotActions())if(a.getName().equals(n))return true;return false;}
 
@@ -465,6 +445,9 @@ public final class BotGui implements Listener {
 
     @EventHandler public void onInteractBot(PlayerInteractAtEntityEvent e){
         if(!FakeplayerConfig.shortcutEnabled)return;
+        if (FakeplayerConfig.canOpenActionGui) {
+            return;
+        }
         ServerBot bot=null;if(e.getRightClicked()instanceof org.leavesmc.leaves.entity.bot.CraftBot cb)bot=cb.getHandle();if(bot==null)return;
         Player p=e.getPlayer();if(!p.isSneaking()||!p.getInventory().getItemInMainHand().getType().isAir())return;
         if(!canM(bot,p))return;if(e.getHand()!=EquipmentSlot.HAND)openPanel(p,bot);
