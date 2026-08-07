@@ -35,10 +35,19 @@ public class ServerMoveAction extends AbstractStateBotAction<ServerMoveAction> {
         super("move", ServerMoveAction::new);
         this.addArgument("direction", EnumArgumentType.fromEnum(MoveDirection.class));
 
-        this.guiData = new GuiRootNode("Move", "Move", null, "move", false);
+        this.guiData = new GuiRootNode("移动", "移动", null, "move", false);
         for (MoveDirection direction : MoveDirection.values()) {
-            this.guiData.child(new GuiRootNode(direction.name, direction.name, Items.LEATHER_BOOTS, "move " + direction.name));
+            this.guiData.child(new GuiRootNode(translateMoveDirection(direction), translateMoveDirection(direction), Items.LEATHER_BOOTS, "move " + direction.name));
         }
+    }
+
+    private static String translateMoveDirection(MoveDirection direction) {
+        return switch (direction) {
+            case FORWARD -> "前进";
+            case BACKWARD -> "后退";
+            case LEFT -> "左移";
+            case RIGHT -> "右移";
+        };
     }
 
     @Override

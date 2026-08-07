@@ -35,7 +35,7 @@ import org.leavesmc.leaves.entity.bot.actions.CraftBreakBlockAction;
 public class ServerBreakBlockAction extends AbstractTimerBotAction<ServerBreakBlockAction> {
 
     public ServerBreakBlockAction() {
-        GuiRootNode guiRootNode = new GuiRootNode("Break", "Break a block", Items.DIAMOND_PICKAXE, "break");
+        GuiRootNode guiRootNode = new GuiRootNode("挖掘", "破坏准星指向的方块", Items.DIAMOND_PICKAXE, "break");
         super("break", ServerBreakBlockAction::new, guiRootNode);
     }
 

@@ -28,7 +28,7 @@ public class ServerSneakAction extends AbstractStateBotAction<ServerSneakAction>
     public ServerSneakAction() {
         super("sneak", ServerSneakAction::new);
 
-        this.guiData = new GuiRootNode("Sneak", "Sneak", null, "sneak");
+        this.guiData = new GuiRootNode("潜行", "潜行", null, "sneak");
     }
 
     @Override

@@ -26,7 +26,7 @@ import org.leavesmc.leaves.entity.bot.actions.CraftDropAction;
 public class ServerDropAction extends AbstractTimerBotAction<ServerDropAction> {
 
     public ServerDropAction() {
-        GuiRootNode guiRootNode = new GuiRootNode("Drop", "Drop all items", Items.BARRIER, "drop");
+        GuiRootNode guiRootNode = new GuiRootNode("丢弃", "丢弃物品", Items.BARRIER, "drop");
         super("drop", ServerDropAction::new, guiRootNode);
     }
 

@@ -432,10 +432,10 @@ public final class BotGui implements Listener {
         if(AWAIT_XP.containsKey(uid)){e.setCancelled(true);String fn=AWAIT_XP.remove(uid);
             try{int amt=Integer.parseInt(e.getMessage().trim());int pg=XP_PAGE.getOrDefault(uid,0);
                 p.getScheduler().run(MinecraftInternalPlugin.INSTANCE,task->{
-                    if(pg==0)p.performCommand("bot xp level "+fn+" "+amt);        // take level
-                    else if(pg==1)p.performCommand("bot xp take "+fn+" "+amt);     // take points
-                    else if(pg==2)p.performCommand("bot xp level give "+fn+" "+amt); // give level
-                    else p.performCommand("bot xp give "+fn+" "+amt);              // give points
+                    if(pg==0)p.performCommand("bot xp "+fn+" level "+amt);        // take level
+                    else if(pg==1)p.performCommand("bot xp "+fn+" take "+amt);     // take points
+                    else if(pg==2)p.performCommand("bot xp "+fn+" level give "+amt); // give level
+                    else p.performCommand("bot xp "+fn+" give "+amt);              // give points
                     String action=pg<2?"获取":"给予";String unit=pg%2==0?"级":"点";
                     p.sendMessage(t("已"+action+amt+unit+"经验",NamedTextColor.GREEN));
                     ServerBot b=BotList.INSTANCE.getBotByName(fn.toLowerCase(Locale.ROOT));if(b!=null)openXP(p,b,pg);
@@ -480,10 +480,10 @@ public final class BotGui implements Listener {
             p.sendMessage(t(hint,NamedTextColor.GREEN));return;
         }
         // Determine action type from argument prefix
-        if(arg.startsWith("give_lv:")){String amt=arg.substring(8);p.performCommand("bot xp level give "+fn+" "+amt);}  // give levels (custom command)
-        else if(arg.startsWith("give:")){String amt=arg.substring(5);p.performCommand("bot xp give "+fn+" "+amt);}
-        else if(pg==0){p.performCommand("bot xp level "+fn+" "+arg);}   // take level
-        else{p.performCommand("bot xp take "+fn+" "+arg);}               // take points
+        if(arg.startsWith("give_lv:")){String amt=arg.substring(8);p.performCommand("bot xp "+fn+" level give "+amt);}  // give levels
+        else if(arg.startsWith("give:")){String amt=arg.substring(5);p.performCommand("bot xp "+fn+" give "+amt);}
+        else if(pg==0){p.performCommand("bot xp "+fn+" level "+arg);}   // take level
+        else{p.performCommand("bot xp "+fn+" take "+arg);}               // take points
         p.getScheduler().runDelayed(MinecraftInternalPlugin.INSTANCE,task->{if(!bot.isRemoved())openXP(p,bot,pg);},null,2L);
     }
     private static void hGSet(Player p,ServerBot bot,String flag){

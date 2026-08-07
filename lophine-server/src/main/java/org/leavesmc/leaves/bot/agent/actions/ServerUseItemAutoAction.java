@@ -39,7 +39,7 @@ import static org.leavesmc.leaves.bot.agent.actions.ServerUseItemToAction.useIte
 public class ServerUseItemAutoAction extends AbstractUseBotAction<ServerUseItemAutoAction> {
 
     public ServerUseItemAutoAction() {
-        GuiRootNode guiRootNode = new GuiRootNode("Use", "Use Item", Items.BOW, "use_auto");
+        GuiRootNode guiRootNode = new GuiRootNode("使用", "使用手中物品", Items.BOW, "use_auto");
         super("use_auto", ServerUseItemAutoAction::new, guiRootNode);
     }
 

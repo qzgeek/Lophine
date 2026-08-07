@@ -6,6 +6,7 @@
 
 - 当前主入口是 `/bot`
 - 推荐的命令顺序是：`/bot <动作> <名字> [参数]`
+- 玩家手册见：`docs/BOT_PLAYER_GUIDE.md`
 - GUI 只负责发命令，不直接改 bot 状态
 - 假人列表同时包含在线 bot 和离线持久化记录
 - 权限系统是“主人/管理员 > 个人权限(PSet) > 公开权限(GSet) > 拒绝”
@@ -147,6 +148,8 @@
 - Start 模式按动作树逐层选择并执行命令
 - Stop 模式列出当前运行中的动作，可按动作 UUID 停止
 - 控制面板里的“动作”按钮现在直接打开这套上游动作 GUI
+- 2026-08 排查结论：生产服 action GUI 无法让假人移动的首要根因不是 LuoOS 登录保护，而是 `/mc/lophine_config/lophine_carpet_config.toml` 中 `fakePlayerTicksLikeRealPlayer = true`。该配置会让假人走 NETWORK tick，动作队列不会正常执行；生产应改为 `false`。
+- action GUI 当前已汉化：启动/停止、返回/主页、分页、命令预览、动作名称、延迟/间隔/次数、停止动作提示均为中文。
 
 ### 设置面板
 

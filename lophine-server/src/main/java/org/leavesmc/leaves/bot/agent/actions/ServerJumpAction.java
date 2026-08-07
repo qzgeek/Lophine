@@ -26,7 +26,7 @@ import org.leavesmc.leaves.entity.bot.actions.CraftJumpAction;
 public class ServerJumpAction extends AbstractTimerBotAction<ServerJumpAction> {
 
     public ServerJumpAction() {
-        GuiRootNode guiRootNode = new GuiRootNode("Jump", "Jump", Items.ELYTRA, "jump");
+        GuiRootNode guiRootNode = new GuiRootNode("跳跃", "跳跃", Items.ELYTRA, "jump");
         super("jump", ServerJumpAction::new, guiRootNode);
     }
 

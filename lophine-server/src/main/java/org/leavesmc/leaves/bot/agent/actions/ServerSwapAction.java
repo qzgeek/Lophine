@@ -30,7 +30,7 @@ public class ServerSwapAction extends AbstractBotAction<ServerSwapAction> {
     public ServerSwapAction() {
         super("swap", ServerSwapAction::new);
 
-        this.guiData = new GuiRootNode("Swap", "Swap", Items.SHIELD, "swap");
+        this.guiData = new GuiRootNode("换手", "主副手交换", Items.SHIELD, "swap");
     }
 
     @Override

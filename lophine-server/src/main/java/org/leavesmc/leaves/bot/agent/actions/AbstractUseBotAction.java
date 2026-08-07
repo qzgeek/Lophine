@@ -42,9 +42,9 @@ public abstract class AbstractUseBotAction<T extends AbstractUseBotAction<T>> ex
         super(name, supplier, guiData);
         this.addArgument("use_timeout", integer(-1))
                 .suggests((context, builder) -> {
-                    builder.suggest("-1", Component.literal("no use timeout"));
-                    builder.suggest("3", Component.literal("minimum bow shoot time"));
-                    builder.suggest("10", Component.literal("minimum trident shoot time"));
+                    builder.suggest("-1", Component.literal("不限制使用时长"));
+                    builder.suggest("3", Component.literal("弓最低拉弓时间"));
+                    builder.suggest("10", Component.literal("三叉戟最低蓄力时间"));
                 })
                 .setOptional(true);
 
@@ -53,9 +53,9 @@ public abstract class AbstractUseBotAction<T extends AbstractUseBotAction<T>> ex
         for (GuiNode node : guiData.getAllFurthestChildren()) {
             GuiSubNode node0 = (GuiSubNode) node;
             node0.child(
-                    new GuiSubNode("-1", "no use timeout", null, node0, "-1"),
-                    new GuiSubNode("3", "minimum bow shoot time", null, node0, "3"),
-                    new GuiSubNode("10", "minimum trident shoot time", null, node0, "10")
+                    new GuiSubNode("不限制", "不限制使用时长", null, node0, "-1"),
+                    new GuiSubNode("弓最低时间", "弓最低拉弓时间", null, node0, "3"),
+                    new GuiSubNode("三叉戟最低时间", "三叉戟最低蓄力时间", null, node0, "10")
             );
         }
     }

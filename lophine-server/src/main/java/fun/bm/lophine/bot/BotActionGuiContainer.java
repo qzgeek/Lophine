@@ -264,10 +264,10 @@ public class BotActionGuiContainer extends SimpleContainer {
 
     private static ItemStack createEmptyActionPlaceholder() {
         ItemStack item = new ItemStack(Items.STRUCTURE_VOID);
-        item.set(DataComponents.CUSTOM_NAME, Component.literal("§cNo active actions"));
+        item.set(DataComponents.CUSTOM_NAME, Component.literal("§c没有正在运行的动作"));
         item.set(DataComponents.LORE, new ItemLore(List.of(
-                Component.literal("§cThis bot has no running actions"),
-                Component.literal("§cUse START to add new actions")
+                Component.literal("§c该假人当前没有运行中的动作"),
+                Component.literal("§c点击启动动作来添加新动作")
         )));
         return item;
     }
@@ -325,15 +325,15 @@ public class BotActionGuiContainer extends SimpleContainer {
 
     private static ItemStack createBackButtonItem() {
         ItemStack item = new ItemStack(Items.RED_WOOL);
-        item.set(DataComponents.CUSTOM_NAME, Component.literal("§cBack"));
-        item.set(DataComponents.LORE, new ItemLore(List.of(Component.literal("Return to previous page"))));
+        item.set(DataComponents.CUSTOM_NAME, Component.literal("§c返回"));
+        item.set(DataComponents.LORE, new ItemLore(List.of(Component.literal("返回上一页"))));
         return item;
     }
 
     private static ItemStack createHomeButtonItem() {
         ItemStack item = new ItemStack(Items.RED_BED);
-        item.set(DataComponents.CUSTOM_NAME, Component.literal("§aHome"));
-        item.set(DataComponents.LORE, new ItemLore(List.of(Component.literal("Return to main menu"))));
+        item.set(DataComponents.CUSTOM_NAME, Component.literal("§a主页"));
+        item.set(DataComponents.LORE, new ItemLore(List.of(Component.literal("返回动作主菜单"))));
         return item;
     }
 
@@ -360,7 +360,7 @@ public class BotActionGuiContainer extends SimpleContainer {
             }
 
             // Add golden run hint
-            loreLines.add(Component.literal("§6Click to execute"));
+            loreLines.add(Component.literal("§6点击执行"));
 
             itemStack.set(DataComponents.LORE, new ItemLore(loreLines));
         }
@@ -492,13 +492,13 @@ public class BotActionGuiContainer extends SimpleContainer {
 
     private static ItemStack createPrevPageItem() {
         ItemStack item = new ItemStack(Items.ARROW);
-        item.set(DataComponents.CUSTOM_NAME, Component.literal("§ePrevious Page"));
+        item.set(DataComponents.CUSTOM_NAME, Component.literal("§e上一页"));
         return item;
     }
 
     private static ItemStack createNextPageItem() {
         ItemStack item = new ItemStack(Items.ARROW);
-        item.set(DataComponents.CUSTOM_NAME, Component.literal("§eNext Page"));
+        item.set(DataComponents.CUSTOM_NAME, Component.literal("§e下一页"));
         return item;
     }
 
@@ -512,31 +512,31 @@ public class BotActionGuiContainer extends SimpleContainer {
         boolean canRun = this.currentNode != null && this.currentNode.isConfirmable();
 
         List<Component> loreLines = new ArrayList<>();
-        loreLines.add(Component.literal("§eCommand:"));
+        loreLines.add(Component.literal("§e命令:"));
         loreLines.add(Component.literal("§f" + commandPreview));
 
         // Add run hint if the node is confirmable
         if (canRun) {
-            loreLines.add(Component.literal("§6Click to execute"));
+            loreLines.add(Component.literal("§6点击执行"));
         }
 
-        item.set(DataComponents.CUSTOM_NAME, Component.literal("§6Command Builder"));
+        item.set(DataComponents.CUSTOM_NAME, Component.literal("§6命令预览"));
         item.set(DataComponents.LORE, new ItemLore(loreLines));
         return item;
     }
 
     private String buildCommandPreview() {
         if (this.selectedActionType == null) {
-            return "Select an action type first";
+            return "请先选择启动或停止";
         }
 
         // For STOP action type, show different preview
         if (this.selectedActionType == ActionType.ACTION_STOP) {
             int actionSize = this.bot.getActionSize();
             if (actionSize == 0) {
-                return "No actions to stop";
+                return "没有可停止的动作";
             }
-            return "Click an action to stop it (" + actionSize + " active)";
+            return "点击一个动作来停止（当前 " + actionSize + " 个）";
         }
 
         try {
@@ -562,10 +562,10 @@ public class BotActionGuiContainer extends SimpleContainer {
                 // At root nodes level or selecting action type
                 return extra.trim() + " <command>";
             } else {
-                return "Select a command node";
+                return "请选择动作节点";
             }
         } catch (Exception e) {
-            return "Error building command";
+            return "命令生成失败";
         }
     }
 
@@ -634,9 +634,9 @@ public class BotActionGuiContainer extends SimpleContainer {
         CompoundTag nbt = new CompoundTag();
         ((CraftBotAction<?, ?>) action).getHandle().save(nbt);
         nbt.forEach((key, tag) -> loreLines.add(Component.literal("§7" + key + ": §f" + tag)));
-        loreLines.add(Component.literal("§7Index: §f" + index));
-        loreLines.add(Component.literal("§7Hash: §f" + actionHash.substring(0, 8)));
-        loreLines.add(Component.literal("§6Click to stop this action"));
+        loreLines.add(Component.literal("§7序号: §f" + index));
+        loreLines.add(Component.literal("§7标识: §f" + actionHash.substring(0, 8)));
+        loreLines.add(Component.literal("§6点击停止该动作"));
 
         item.set(DataComponents.LORE, new ItemLore(loreLines));
         return item;

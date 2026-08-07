@@ -38,7 +38,7 @@ public abstract class AbstractTimerBotAction<E extends AbstractTimerBotAction<E>
         this.addArgument("delay", integer(0)).suggests(strings(delaySuggestions)).setOptional(true);
         this.addArgument("interval", integer(0)).suggests(strings(intervalSuggestions)).setOptional(true);
         this.addArgument("do_number", integer(-1))
-                .suggests(((context, builder) -> builder.suggest("-1", Component.literal("do infinite times"))))
+                .suggests(((context, builder) -> builder.suggest("-1", Component.literal("无限执行"))))
                 .setOptional(true);
 
         if (guiData == null) return;
@@ -46,20 +46,20 @@ public abstract class AbstractTimerBotAction<E extends AbstractTimerBotAction<E>
         this.guiData = guiData;
         GuiSubNode[] node1 = new GuiSubNode[delaySuggestions.length];
         for (int i = 0; i < delaySuggestions.length; i++) {
-            node1[i] = new GuiSubNode(delaySuggestions[i], "Delay for a few ticks", null, guiData, delaySuggestions[i]);
+            node1[i] = new GuiSubNode(delaySuggestions[i], "延迟若干 tick 后执行", null, guiData, delaySuggestions[i]);
             guiData.child(node1[i]);
         }
         GuiSubNode[] node2 = new GuiSubNode[delaySuggestions.length * intervalSuggestions.length];
         for (int i = 0; i < delaySuggestions.length; i++) {
             for (int j = 0; j < intervalSuggestions.length; j++) {
                 int id = i * intervalSuggestions.length + j;
-                node2[id] = new GuiSubNode(intervalSuggestions[j], "Interval for a few ticks", null, node1[i], intervalSuggestions[j]);
+                node2[id] = new GuiSubNode(intervalSuggestions[j], "每隔若干 tick 执行一次", null, node1[i], intervalSuggestions[j]);
                 node1[i].child(node2[id]);
             }
         }
 
         for (GuiSubNode node : node2) {
-            GuiSubNode subNode = new GuiSubNode("-1", "Number of times to do", null, node, "-1");
+            GuiSubNode subNode = new GuiSubNode("-1", "执行次数，-1 表示无限", null, node, "-1");
             node.child(subNode);
         }
     }

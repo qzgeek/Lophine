@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public enum ActionType {
-    ACTION_START("Start", "Start a action", Items.LIME_DYE, "action", "start"),
-    ACTION_STOP("Stop", "Stop a action or see this bot scheduled tasks", Items.RED_DYE, "action", "stop", 0);
+    ACTION_START("启动动作", "让假人开始执行一个动作", Items.LIME_DYE, "action", "start"),
+    ACTION_STOP("停止动作", "停止假人正在执行的动作", Items.RED_DYE, "action", "stop", 0);
 
     private final String displayName;
     private final String description;

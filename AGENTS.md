@@ -6,16 +6,15 @@ Compact instructions for AI agents working in this repo.
 
 Lophine is a Minecraft server fork: Lophine → Luminol → Folia → Paper → Spigot → CraftBukkit → NMS. It adds configurable vanilla features, redstone/survival-circuit enhancements, and Carpet-compatible rules on top of Folia's multi-threaded region system.
 
-Group ID: `fun.bm.lophine`, MC version: 1.21.11, Java 21 required.
+Group ID: `fun.bm.lophine`, MC version: 26.1.2, Java 25 recommended for this fork.
 
 ## Build
 
 ```bash
-./gradlew applyAllPatches   # generates upstream source dirs (paper-server/, luminol-server/, etc.)
-./gradlew createMojmapPaperclipJar  # builds the server JAR
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64 ./gradlew :lophine-server:createBundlerJar --no-daemon
 ```
 
-Output: `lophine-server/build/libs/lophine-*-paperclip.jar`
+Output: `lophine-server/build/libs/lophine-bundler-<version>.jar`
 
 ## Patch system (critical)
 

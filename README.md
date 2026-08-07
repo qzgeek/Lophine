@@ -22,12 +22,20 @@
 
 ## ✨ 核心特性
 
+> 说明：本仓库是 qzgeek 维护的 Lophine fork，当前重点维护 Folia 26.1.2 假人系统、像素战记生产服适配和若干生存服实用修复。不是向上游提交 PR 的临时分支。
+
 - 🔧 **可配置的原版特性** - 灵活调整游戏机制以适应不同服务器需求
 - 📊 **Tpsbar 支持** - 实时显示服务器 TPS 状态
 - 🐛 **Folia Bug 修复** - 针对 Folia 已知问题的专项修复
 - 💾 **多存档格式支持** - 支持 linear 和 b_linear（linear 重新实现）存档格式
 - 🔬 **生电功能增强** - 在 Folia 上实现更多生电内容（完整生电请使用 Fabric）
 - 🛠️ **更多实用功能** - 持续添加有用的服务器功能
+- 🤖 **内置假人系统** - `/bot` 命令、中文 GUI、协作者权限、动作 GUI、经验存取和持久化管理
+
+## 🤖 假人文档
+
+- [玩家手册：假人命令与 GUI](./docs/BOT_PLAYER_GUIDE.md)
+- [开发与改版说明](./FAKEPLAYER_FEATURES.md)
 
 ## 📥 下载
 
@@ -41,11 +49,11 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/LophineLabs/Lophine.git
+git clone https://github.com/qzgeek/Lophine.git
 cd Lophine
 
-# 应用补丁并构建 Paperclip JAR
-./gradlew applyAllPatches && ./gradlew createPaperclipJar
+# 构建当前 fork 使用的 bundler JAR
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64 ./gradlew :lophine-server:createBundlerJar --no-daemon
 ```
 
 构建完成后，您可以在 `lophine-server/build/libs` 目录中找到生成的 JAR 文件。

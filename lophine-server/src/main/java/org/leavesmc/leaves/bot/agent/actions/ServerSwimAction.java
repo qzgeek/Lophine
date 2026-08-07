@@ -29,7 +29,7 @@ public class ServerSwimAction extends AbstractStateBotAction<ServerSwimAction> {
     public ServerSwimAction() {
         super("swim", ServerSwimAction::new);
 
-        this.guiData = new GuiRootNode("Swim", "Swim", Items.WATER_BUCKET, "swim");
+        this.guiData = new GuiRootNode("游泳", "游泳", Items.WATER_BUCKET, "swim");
     }
 
     @Override

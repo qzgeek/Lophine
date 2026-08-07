@@ -31,7 +31,7 @@ import org.leavesmc.leaves.entity.bot.actions.CraftFishAction;
 public class ServerFishAction extends AbstractTimerBotAction<ServerFishAction> {
 
     public ServerFishAction() {
-        GuiRootNode guiRootNode = new GuiRootNode("Fish", "Fish", Items.FISHING_ROD, "fish");
+        GuiRootNode guiRootNode = new GuiRootNode("钓鱼", "自动钓鱼", Items.FISHING_ROD, "fish");
         super("fish", ServerFishAction::new, guiRootNode);
     }
 

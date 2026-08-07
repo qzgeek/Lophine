@@ -27,7 +27,7 @@ import org.leavesmc.leaves.entity.bot.actions.CraftAttackAction;
 public class ServerAttackAction extends AbstractTimerBotAction<ServerAttackAction> {
 
     public ServerAttackAction() {
-        GuiRootNode guiData = new GuiRootNode("Attack", "Attack an entity", Items.DIAMOND_SWORD, "attack");
+        GuiRootNode guiData = new GuiRootNode("攻击", "攻击准星指向的实体", Items.DIAMOND_SWORD, "attack");
         super("attack", ServerAttackAction::new, guiData);
     }
 

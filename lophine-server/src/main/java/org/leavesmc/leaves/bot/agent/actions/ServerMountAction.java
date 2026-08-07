@@ -34,7 +34,7 @@ public class ServerMountAction extends AbstractBotAction<ServerMountAction> {
     public ServerMountAction() {
         super("mount", ServerMountAction::new);
 
-        this.guiData = new GuiRootNode("Mount", "Mount", Items.SADDLE, "mount");
+        this.guiData = new GuiRootNode("骑乘", "骑乘附近实体", Items.SADDLE, "mount");
     }
 
     @Override

@@ -61,9 +61,9 @@ public class StartCommand extends LiteralNode {
         newAction.loadCommand(context);
         if (bot.addBotAction(newAction, sender)) {
             sender.sendMessage(join(spaces(),
-                    text("Action", GRAY),
+                    text("动作", GRAY),
                     text(newAction.getName(), AQUA).hoverEvent(showText(text(newAction.getActionDataString()))),
-                    text("has been issued to", GRAY),
+                    text("已发给", GRAY),
                     asAdventure(bot.getDisplayName())
             ));
         }

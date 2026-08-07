@@ -97,6 +97,9 @@ public final class PlayerCommand {
                         // === /bot kill <name> ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("kill")
                                 .then(playerArg().executes(PlayerCommand::kill)))
+                        // === /bot remove <name> ===
+                        .then(LiteralArgumentBuilder.<CommandSourceStack>literal("remove")
+                                .then(playerArg().executes(PlayerCommand::remove)))
                         // === /bot spawn <name> [time <seconds>] ===
                         .then(LiteralArgumentBuilder.<CommandSourceStack>literal("spawn")
                                 .then(playerArg()
@@ -683,7 +686,7 @@ public final class PlayerCommand {
         ServerBot bot = getBot(ctx);
         if (bot == null) return 0;
 
-        String configName = StringArgumentType.getString(ctx, "configName");
+        String configName = StringArgumentType.getString(ctx, "setting");
         String valueStr = StringArgumentType.getString(ctx, "value");
 
         AbstractBotConfig<?, ?> config = Configs.getConfig(configName);
@@ -915,7 +918,8 @@ public final class PlayerCommand {
                 Component.text("\n/bot menu <名字> — 打开控制面板"),
                 Component.text("\n/bot echest <名字> — 打开末影箱"),
                 Component.text("\n/bot tp <名字> — 传送到身边"),
-                Component.text("\n/bot kill <名字> — 杀死假人"),
+                Component.text("\n/bot kill <名字> — 下线/终止假人"),
+                Component.text("\n/bot remove <名字> — 彻底删除假人"),
                 Component.text("\n", NamedTextColor.WHITE),
                 Component.text("\n§6§l动作", NamedTextColor.GOLD),
                 Component.text("\nsneak/unsneak <名字> sprint/unsprint <名字>"),
@@ -977,6 +981,20 @@ public final class PlayerCommand {
             return 0;
         }
         BotList.INSTANCE.removeBot(bot, BotRemoveEvent.RemoveReason.COMMAND, context.getSource().getSender(), false, false);
+        return 1;
+    }
+
+    private static int remove(CommandContext<CommandSourceStack> context) {
+        ServerBot bot = getBot(context);
+        if (bot == null) {
+            context.getSource().getSender().sendMessage(Component.text("找不到该假人", NamedTextColor.RED));
+            return 0;
+        }
+        if (!hasManagePermission(bot, context.getSource().getSender())) {
+            context.getSource().getSender().sendMessage(Component.text("你没有权限管理该假人", NamedTextColor.RED));
+            return 0;
+        }
+        BotList.INSTANCE.removeBotPermanently(bot, context.getSource().getSender());
         return 1;
     }
 
