@@ -18,6 +18,7 @@
 package org.leavesmc.leaves.command.bot.subcommands.action;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
@@ -49,6 +50,7 @@ public class StopCommand extends LiteralNode {
     public StopCommand() {
         super("stop");
         children(StopIndexArgument::new);
+        children(StopHashArgument::new);
         children(StopAll::new);
     }
 
@@ -93,13 +95,54 @@ public class StopCommand extends LiteralNode {
                 action.stop(bot, BotActionStopEvent.Reason.COMMAND);
                 bot.getBotActions().remove(index);
                 sender.sendMessage(join(spaces(),
-                        text("Already stopped", GRAY),
-                        asAdventure(bot.getDisplayName()).append(text("'s", GRAY)),
-                        text("action", GRAY),
+                        text("已停止", GRAY),
+                        asAdventure(bot.getDisplayName()),
+                        text("的动作", GRAY),
                         text(action.getName(), AQUA).hoverEvent(showText(text(action.getActionDataString())))
                 ));
             } else {
-                sender.sendMessage(text("Action stop cancelled by a plugin", RED));
+                sender.sendMessage(text("动作停止被插件取消", RED));
+            }
+            return true;
+        }
+    }
+
+    private static class StopHashArgument extends ArgumentNode<String> {
+
+        private StopHashArgument() {
+            super("hash", StringArgumentType.string());
+        }
+
+        @Override
+        protected boolean execute(CommandContext context) throws CommandSyntaxException {
+            ServerBot bot = ActionCommand.BotArgument.getBot(context);
+            CommandSender sender = context.getSender();
+
+            String hash = context.getArgument(StopHashArgument.class);
+
+            AbstractBotAction<?> action = null;
+            for (AbstractBotAction<?> action1 : bot.getBotActions()) {
+                if (action1.getUUID().toString().equals(hash)) {
+                    action = action1;
+                    break;
+                }
+            }
+            if (action == null) throw CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument().create();
+            BotActionStopEvent event = new BotActionStopEvent(
+                    bot.getBukkitEntity(), action.getName(), action.getUUID(), BotActionStopEvent.Reason.COMMAND, sender
+            );
+            event.callEvent();
+            if (!event.isCancelled()) {
+                action.stop(bot, BotActionStopEvent.Reason.COMMAND);
+                bot.getBotActions().remove(action);
+                sender.sendMessage(join(spaces(),
+                        text("已停止", GRAY),
+                        asAdventure(bot.getDisplayName()),
+                        text("的动作", GRAY),
+                        text(action.getName(), AQUA).hoverEvent(showText(text(action.getActionDataString())))
+                ));
+            } else {
+                sender.sendMessage(text("动作停止被插件取消", RED));
             }
             return true;
         }
@@ -118,7 +161,7 @@ public class StopCommand extends LiteralNode {
             List<AbstractBotAction<?>> actions = bot.getBotActions();
             CommandSender sender = context.getSender();
             if (actions.isEmpty()) {
-                sender.sendMessage(text("This bot has no active actions", GRAY));
+                sender.sendMessage(text("该假人当前没有正在运行的动作", GRAY));
                 return true;
             }
 
@@ -140,14 +183,14 @@ public class StopCommand extends LiteralNode {
 
             if (canceled.isEmpty()) {
                 sender.sendMessage(join(spaces(),
-                        asAdventure(bot.getDisplayName()).append(text("'s", GRAY)),
-                        text("action list cleared", GRAY)
+                        asAdventure(bot.getDisplayName()),
+                        text("的动作列表已清空", GRAY)
                 ));
             } else {
                 sender.sendMessage(join(spaces(),
-                        text("Tried to clear", GRAY),
-                        asAdventure(bot.getDisplayName()).append(text("'s", GRAY)),
-                        text("action list, but following actions' stop was canceled by plugin:", GRAY)
+                        text("尝试清空", GRAY),
+                        asAdventure(bot.getDisplayName()),
+                        text("的动作列表，但以下动作被插件阻止停止:", GRAY)
                 ));
                 for (AbstractBotAction<?> action : canceled) {
                     context.getSender().sendMessage(

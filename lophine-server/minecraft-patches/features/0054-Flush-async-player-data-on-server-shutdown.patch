@@ -1,0 +1,18 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: qzgeek <xcgeek@163.com>
+Date: Sat, 22 Aug 2026 15:30:00 +0800
+Subject: [PATCH] Flush async player data on server shutdown
+
+
+diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
+index 0000000..2222222 100644
+--- a/net/minecraft/server/MinecraftServer.java
++++ b/net/minecraft/server/MinecraftServer.java
+@@ -1,4 +1,7 @@
+     public void stopPart2() {
+         // Folia end - region threading
++        // Lophine start - 关闭前 flush 异步玩家数据写盘（保证已提交快照全部落盘，不丢数据）
++        net.minecraft.world.level.storage.PlayerDataStorage.shutdownAsync();
++        // Lophine end - 关闭前 flush 异步玩家数据写盘
+         this.savedDataStorage.close();
+         this.resources.close();

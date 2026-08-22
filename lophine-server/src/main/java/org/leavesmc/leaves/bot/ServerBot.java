@@ -20,6 +20,8 @@ package org.leavesmc.leaves.bot;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.authlib.GameProfile;
 import fun.bm.lophine.LophineLogger;
+import fun.bm.lophine.bot.BotActionGuiContainer;
+import fun.bm.lophine.bot.BotActionGuiMenu;
 import fun.bm.lophine.carpet.config.modules.FakePlayerCompatConfig;
 import fun.bm.lophine.config.modules.function.FakeplayerConfig;
 import io.papermc.paper.adventure.PaperAdventure;
@@ -96,6 +98,8 @@ public class ServerBot extends ServerPlayer {
     public boolean resume = false;
     public BotCreateState createState;
     public UUID createPlayer;
+    public Set<UUID> collaborators = new HashSet<>();
+    public static final UUID PUBLIC_ACCESS_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
     public boolean handsBusy = false;
 
     private final int tracingRange;
@@ -357,14 +361,28 @@ public class ServerBot extends ServerPlayer {
     }
 
     @Override
-    public @NotNull InteractionResult interact(@NotNull Player player, @NotNull InteractionHand hand, @NotNull net.minecraft.world.phys.Vec3 location) { // Leaves - Paper 26.1: Entity#interact now takes Vec3
-        if (FakePlayerCompatConfig.openFakePlayerInventory) {
-            if (player instanceof ServerPlayer player1 && player.getMainHandItem().isEmpty()) {
-                BotInventoryOpenEvent event = new BotInventoryOpenEvent(this.getBukkitEntity(), player1.getBukkitEntity());
+    public @NotNull InteractionResult interact(@NotNull Player player, @NotNull InteractionHand hand, @NotNull net.minecraft.world.phys.Vec3 location) {
+        if (player.isShiftKeyDown() && player.getMainHandItem().isEmpty()) {
+            if (FakeplayerConfig.canOpenActionGui && player instanceof ServerPlayer player1) {
+                BotActionGuiOpenEvent event = new BotActionGuiOpenEvent(this.getBukkitEntity(), player1.getBukkitEntity());
                 getServer().server.getPluginManager().callEvent(event);
                 if (!event.isCancelled()) {
-                    player.openMenu(new SimpleMenuProvider((i, inventory, p) -> ChestMenu.sixRows(i, inventory, this.container), this.getDisplayName()));
+                    BotActionGuiContainer container = new BotActionGuiContainer(this.getBukkitEntity(), player1.getBukkitEntity());
+                    player.openMenu(new SimpleMenuProvider((i, inventory, p) -> new BotActionGuiMenu(i, inventory, container), this.getDisplayName()));
                     return InteractionResult.SUCCESS;
+                }
+            }
+            return InteractionResult.PASS; // GUI handles this on the Bukkit event layer
+        }
+        if (FakePlayerCompatConfig.openFakePlayerInventory) {
+            if (player instanceof ServerPlayer player1 && player.getMainHandItem().isEmpty()) {
+                if (player1.getBukkitEntity().isOp()) {
+                    BotInventoryOpenEvent event = new BotInventoryOpenEvent(this.getBukkitEntity(), player1.getBukkitEntity());
+                    getServer().server.getPluginManager().callEvent(event);
+                    if (!event.isCancelled()) {
+                        player.openMenu(new SimpleMenuProvider((i, inventory, p) -> ChestMenu.sixRows(i, inventory, this.container), this.getDisplayName()));
+                        return InteractionResult.SUCCESS;
+                    }
                 }
             }
         }
@@ -759,6 +777,73 @@ public class ServerBot extends ServerPlayer {
 
     public <T, E extends AbstractBotConfig<T, E>> T getConfigValue(@NotNull AbstractBotConfig<T, E> config) {
         return this.getConfig(config).getValue();
+    }
+
+    @Nullable
+    public AbstractBotConfig<?, ?> getConfigByName(@NotNull String name) {
+        return this.configs.get(name);
+    }
+
+    public net.minecraft.world.entity.EntityEquipment getBotEquipment() {
+        return equipment;
+    }
+
+    public BotInventoryContainer getBotContainer() {
+        return container;
+    }
+
+    public boolean hasManagePermission(UUID playerUuid) {
+        if (this.createPlayer != null && this.createPlayer.equals(playerUuid)) {
+            return true;
+        }
+        if (this.collaborators.contains(PUBLIC_ACCESS_UUID)) {
+            return true;
+        }
+        return this.collaborators.contains(playerUuid);
+    }
+
+    public boolean hasManagePermission(org.bukkit.entity.Player player) {
+        return player.isOp() || hasManagePermission(player.getUniqueId());
+    }
+
+    public void spawnExperienceAsOrbs() {
+        if (this.totalExperience <= 0) {
+            return;
+        }
+        int totalXp = this.totalExperience;
+        double x = this.getX();
+        double y = this.getY() + 0.5;
+        double z = this.getZ();
+        ServerLevel level = this.level();
+
+        if (totalXp <= 10) {
+            net.minecraft.world.entity.ExperienceOrb orb = new net.minecraft.world.entity.ExperienceOrb(level, x, y, z, totalXp);
+            level.addFreshEntity(orb);
+            this.totalExperience = 0;
+            this.experienceLevel = 0;
+            this.experienceProgress = 0f;
+            return;
+        }
+
+        int xpPerDrop = 7;
+        int drops = (totalXp + xpPerDrop - 1) / xpPerDrop;
+        if (drops > 6) {
+            drops = 6;
+            xpPerDrop = totalXp / drops;
+        }
+
+        for (int i = 0; i < drops; i++) {
+            double offsetX = (Math.random() - 0.5) * 0.6;
+            double offsetZ = (Math.random() - 0.5) * 0.6;
+            int amount = (i == drops - 1) ? (totalXp - xpPerDrop * (drops - 1)) : xpPerDrop;
+            if (amount > 0) {
+                net.minecraft.world.entity.ExperienceOrb orb = new net.minecraft.world.entity.ExperienceOrb(level, x + offsetX, y, z + offsetZ, amount);
+                level.addFreshEntity(orb);
+            }
+        }
+        this.totalExperience = 0;
+        this.experienceLevel = 0;
+        this.experienceProgress = 0f;
     }
 
     @Override

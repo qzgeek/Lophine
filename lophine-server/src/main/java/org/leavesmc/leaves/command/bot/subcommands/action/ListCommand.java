@@ -49,7 +49,7 @@ public class ListCommand extends LiteralNode {
         CommandSender sender = context.getSender();
         List<AbstractBotAction<?>> actions = bot.getBotActions();
         if (actions.isEmpty()) {
-            sender.sendMessage(text("This bot has no active actions", GRAY));
+            sender.sendMessage(text("该假人当前没有正在运行的动作", GRAY));
             return true;
         }
 

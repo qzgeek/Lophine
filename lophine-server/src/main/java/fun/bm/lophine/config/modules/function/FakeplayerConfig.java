@@ -2,6 +2,7 @@ package fun.bm.lophine.config.modules.function;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import fun.bm.lophine.carpet.config.modules.FakePlayerCompatConfig;
+import fun.bm.lophine.command.player.PlayerCommand;
 import me.earthme.luminol.config.IConfigModule;
 import me.earthme.luminol.config.flags.ConfigClassInfo;
 import me.earthme.luminol.config.flags.ConfigInfo;
@@ -40,17 +41,51 @@ public class FakeplayerConfig implements IConfigModule {
             Regeneration amount for fakeplayers""")
     public static double regenAmount = 0.0;
 
+    @ConfigInfo(name = "open-action-gui", comments = """
+            Allow opening fakeplayer action gui,
+            need sneak to open if you enabled inventory open gui""")
+    public static boolean canOpenActionGui = false;
+
+    @ConfigInfo(name = "resident-fakeplayer", comments = """
+            Allow fakeplayers to persist across restarts""")
+    public static boolean canResident = true;
+
+    @ConfigInfo(name = "open-fakeplayer-inventory", comments = """
+            Allow opening fakeplayer inventory""")
+    public static boolean canOpenInventory = true;
+
+    @ConfigInfo(name = "respawn-on-death", comments = """
+            Auto-respawn fakeplayers at their spawn point when they die.
+            If false, the bot is removed from the server on death.""")
+    public static boolean respawnOnDeath = true;
+
     @ConfigInfo(name = "use-action", comments = """
             Allow fakeplayers to use actions""")
     public static boolean canUseAction = true;
 
     @ConfigInfo(name = "modify-config", comments = """
             Allow modifying fakeplayer config""")
-    public static boolean canModifyConfig = false;
+    public static boolean canModifyConfig = true;
+
+    @ConfigInfo(name = "per-player-limit", comments = """
+            Maximum online fakeplayers per non-OP player (-1 unlimited)""")
+    public static int perPlayerLimit = 5;
+
+    @ConfigInfo(name = "total-player-limit", comments = """
+            Maximum total fakeplayers (online + offline) per non-OP player (-1 unlimited)""")
+    public static int totalPlayerLimit = 10;
+
+    @ConfigInfo(name = "enable-gui", comments = """
+            Enable doll-style GUI""")
+    public static boolean guiEnabled = true;
+
+    @ConfigInfo(name = "shortcut-enabled", comments = """
+            Sneak + right-click bot opens GUI panel""")
+    public static boolean shortcutEnabled = true;
 
     @ConfigInfo(name = "manual-save-and-load", comments = """
             Allow manual save and load of fakeplayers""")
-    public static boolean canManualSaveAndLoad = false;
+    public static boolean canManualSaveAndLoad = true;
 
     @ConfigInfo(name = "cache-skin", comments = """
             Use skin cache for fakeplayers""")
@@ -98,6 +133,7 @@ public class FakeplayerConfig implements IConfigModule {
         if (enable && command == null) {
             command = new BotCommand("bot");
             command.register();
+            PlayerCommand.register();
         }
     }
 
@@ -105,6 +141,7 @@ public class FakeplayerConfig implements IConfigModule {
     public void onUnloaded(CommentedFileConfig configInstance) {
         if (command != null) {
             command.unregister();
+            PlayerCommand.unregister();
             command = null;
         }
     }

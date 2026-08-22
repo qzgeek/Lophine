@@ -4,10 +4,8 @@ import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import me.earthme.luminol.config.IConfigModule;
 import me.earthme.luminol.config.flags.ConfigClassInfo;
 import me.earthme.luminol.config.flags.ConfigInfo;
-import me.earthme.luminol.config.flags.DoNotLoad;
 import me.earthme.luminol.enums.EnumConfigCategory;
 import org.jetbrains.annotations.Nullable;
-import org.leavesmc.leaves.command.bot.BotCommand;
 
 import java.util.Set;
 
@@ -17,17 +15,17 @@ import java.util.Set;
         directory = {"carpet"},
         comments = """
                 Carpet fakeplayer compatibility mapped onto Lophine fakeplayers.
-                commandPlayer is currently backed by Lophine's /bot command surface."""
+                /bot command is registered by FakeplayerConfig using the legacy NMS brigadier PlayerCommand."""
 )
 public class FakePlayerCompatConfig implements IConfigModule {
     @ConfigInfo(name = "commandPlayer", comments = """
-            Enable /player command.(not remapped)
+            Enable /bot command.(not remapped)
             If you want to enable bot command, please see lophine global config.""")
     public static boolean commandPlayer = false;
 
     @ConfigInfo(name = "fakePlayerResident", comments = """
             Keep fakeplayers resident across unload and restart.""")
-    public static boolean fakePlayerResident = false;
+    public static boolean fakePlayerResident = true;
 
     @ConfigInfo(name = "openFakePlayerInventory", comments = """
             Allow opening fakeplayer inventories.""")
@@ -65,22 +63,13 @@ public class FakePlayerCompatConfig implements IConfigModule {
             Persist queued fakeplayer actions across save and reload.""")
     public static boolean fakePlayerReloadAction = false;
 
-    @DoNotLoad
-    private BotCommand command = null;
-
     @Override
     public void onLoaded(CommentedFileConfig configInstance, @Nullable Set<Exception> exs) {
-        if (commandPlayer && command == null) {
-            command = new BotCommand("player");
-            command.register();
-        }
+        // /bot command is now registered by FakeplayerConfig using legacy NMS brigadier PlayerCommand
     }
 
     @Override
     public void onUnloaded(CommentedFileConfig configInstance) {
-        if (command != null) {
-            command.unregister();
-            command = null;
-        }
+        // /bot command unregistration handled by FakeplayerConfig
     }
 }

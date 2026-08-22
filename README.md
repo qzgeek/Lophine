@@ -5,15 +5,15 @@
   
   *Lophine 是一个基于Luminol的分支，具有许多有用的优化和可配置的原版特性，目标是在Folia上实现更多生电的内容（请注意，完整生电请使用Fabric）*
   
-  ![Created At](https://img.shields.io/github/created-at/LophineCraft/Lophine?style=for-the-badge&color=blue)
-  [![License](https://img.shields.io/github/license/LophineCraft/Lophine?style=for-the-badge&color=green)](LICENSE.md)
-  [![Issues](https://img.shields.io/github/issues/LophineCraft/Lophine?style=for-the-badge&color=orange)](https://github.com/LophineCraft/Lophine/issues)
+  ![Created At](https://img.shields.io/github/created-at/LophineLabs/Lophine?style=for-the-badge&color=blue)
+  [![License](https://img.shields.io/github/license/LophineLabs/Lophine?style=for-the-badge&color=green)](LICENSE.md)
+  [![Issues](https://img.shields.io/github/issues/LophineLabs/Lophine?style=for-the-badge&color=orange)](https://github.com/LophineLabs/Lophine/issues)
   
-  ![Commit Activity](https://img.shields.io/github/commit-activity/w/LophineCraft/Lophine?style=for-the-badge&color=purple)
-  ![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/LophineCraft/Lophine?style=for-the-badge&color=yellow)
-  ![GitHub all releases](https://img.shields.io/github/downloads/LophineCraft/Lophine/total?style=for-the-badge&color=red)
+  ![Commit Activity](https://img.shields.io/github/commit-activity/w/LophineLabs/Lophine?style=for-the-badge&color=purple)
+  ![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/LophineLabs/Lophine?style=for-the-badge&color=yellow)
+  ![GitHub all releases](https://img.shields.io/github/downloads/LophineLabs/Lophine/total?style=for-the-badge&color=red)
   
-  ![Repo contributors](https://img.shields.io/github/contributors/LophineCraft/Lophine?style=for-the-badge&color=brightgreen)
+  ![Repo contributors](https://img.shields.io/github/contributors/LophineLabs/Lophine?style=for-the-badge&color=brightgreen)
   
   [English](./README_EN.md) | **中文**
 </div>
@@ -22,17 +22,25 @@
 
 ## ✨ 核心特性
 
+> 说明：本仓库是 qzgeek 维护的 Lophine fork，当前重点维护 Folia 26.1.2 假人系统、像素战记生产服适配和若干生存服实用修复。不是向上游提交 PR 的临时分支。
+
 - 🔧 **可配置的原版特性** - 灵活调整游戏机制以适应不同服务器需求
 - 📊 **Tpsbar 支持** - 实时显示服务器 TPS 状态
 - 🐛 **Folia Bug 修复** - 针对 Folia 已知问题的专项修复
 - 💾 **多存档格式支持** - 支持 linear 和 b_linear（linear 重新实现）存档格式
 - 🔬 **生电功能增强** - 在 Folia 上实现更多生电内容（完整生电请使用 Fabric）
 - 🛠️ **更多实用功能** - 持续添加有用的服务器功能
+- 🤖 **内置假人系统** - `/bot` 命令、中文 GUI、协作者权限、动作 GUI、经验存取和持久化管理
+
+## 🤖 假人文档
+
+- [玩家手册：假人命令与 GUI](./docs/BOT_PLAYER_GUIDE.md)
+- [开发与改版说明](./FAKEPLAYER_FEATURES.md)
 
 ## 📥 下载
 
 ### 稳定版本
-所有发布版本都可以在 [Releases](https://github.com/LuminolMC/Lophine/releases) 页面找到。
+所有发布版本都可以在 [Releases](https://github.com/LophineLabs/Lophine/releases) 页面找到。
 
 ### 开发版本
 如果您想体验最新功能，可以通过以下步骤自行构建。
@@ -41,11 +49,11 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/LuminolMC/Lophine.git
+git clone https://github.com/qzgeek/Lophine.git
 cd Lophine
 
-# 应用补丁并构建 Paperclip JAR
-./gradlew applyAllPatches && ./gradlew createPaperclipJar
+# 构建当前 fork 使用的 bundler JAR
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64 ./gradlew :lophine-server:createBundlerJar --no-daemon
 ```
 
 构建完成后，您可以在 `lophine-server/build/libs` 目录中找到生成的 JAR 文件。
@@ -91,15 +99,13 @@ dependencies {
 
 ### 加入我们的社区
 
-- **QQ群**: [1015048616](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=QML5kIVsniPi1PlZvnjHQT_02EHsZ5Jc&authKey=%2FTCJsZC7JFQ9sxAroPCKuYnlV57Z5fyqp36ewXZk3Sn4iJ9p4MB1JKdc%2FFcX3HOM&noverify=0&group_code=1015048616)
-- **QQ频道**: [点击加入](https://pd.qq.com/s/eq9krf9j)
-- **Telegram**: [点击加入](https://t.me/LuminolMinecraft)
-- **Discord**: [点击加入](https://discord.gg/Qd7m3V6eDx)
+- **QQ群**: [1020403749](https://qm.qq.com/cgi-bin/qm/qr?k=y_MA9UaN7PM9e9J1LIs9Eea3LK8C0h6J&jump_from=webapi&authKey=ap5f8MlbeezXYtnmpnT5ZOFljDuOyV6OAb2PIcViQ+Ilr60Ycq63FDDTsJOZDYtj)
+- **Discord**: [点击加入](https://discord.gg/UXSgPZczcy)
 
 ### 获取帮助
 
-- 📋 [提交 Issue](https://github.com/LuminolMC/Lophine/issues)
-- 💬 [GitHub Discussions](https://github.com/LuminolMC/Lophine/discussions)
+- 📋 [提交 Issue](https://github.com/LophineLabs/Lophine/issues)
+- 💬 [GitHub Discussions](https://github.com/LophineLabs/Lophine/discussions)
 - 📖 [项目文档](./docs/)
 
 ## 🐛 问题反馈

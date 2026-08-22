@@ -1,0 +1,133 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: qzgeek <xcgeek@163.com>
+Date: Sat, 22 Aug 2026 15:30:00 +0800
+Subject: [PATCH] Add async player data saving
+
+
+diff --git a/net/minecraft/world/level/storage/PlayerDataStorage.java b/net/minecraft/world/level/storage/PlayerDataStorage.java
+index 0000000..1111111 100644
+--- a/net/minecraft/world/level/storage/PlayerDataStorage.java
++++ b/net/minecraft/world/level/storage/PlayerDataStorage.java
+@@ -3,11 +3,18 @@
+ import com.mojang.datafixers.DataFixer;
+ import com.mojang.logging.LogUtils;
+ import java.io.File;
++import java.io.IOException;
++import java.io.OutputStream;
+ import java.nio.file.Files;
+ import java.nio.file.Path;
+ import java.nio.file.StandardCopyOption;
+ import java.time.ZonedDateTime;
+ import java.util.Optional;
++import java.util.UUID;
++import java.util.concurrent.ConcurrentHashMap;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++import java.util.concurrent.TimeUnit;
+ import net.minecraft.nbt.CompoundTag;
+ import net.minecraft.nbt.NbtAccounter;
+ import net.minecraft.nbt.NbtIo;
+@@ -24,6 +31,19 @@
+     private final File playerDir;
+     protected final DataFixer fixerUpper;
+ 
++    // Lophine start - 异步玩家数据写盘（消除「同步 gzip + StandardOpenOption.SYNC 每次写都 fsync」在 region 线程上导致的卡顿）
++    // 数据安全：序列化快照仍在 region 线程完成；写盘用临时文件 + 原子 rename（safeReplaceFile）；
++    // 单线程后台执行 + 每玩家独立锁保证顺序；关闭时 shutdownAsync() flush 所有 pending。
++    private static final ConcurrentHashMap<UUID, Object> ASYNC_LOCKS = new ConcurrentHashMap<>();
++    private static final ConcurrentHashMap<UUID, CompoundTag> ASYNC_PENDING_TAGS = new ConcurrentHashMap<>();
++    private static final ConcurrentHashMap<UUID, Path> ASYNC_PENDING_DIRS = new ConcurrentHashMap<>();
++    private static final ExecutorService ASYNC_WRITER = Executors.newSingleThreadExecutor(r -> {
++        final Thread t = new Thread(r, "Lophine-PlayerData-Writer");
++        t.setDaemon(true);
++        return t;
++    });
++    // Lophine end - 异步玩家数据写盘
++
+     public PlayerDataStorage(final LevelStorageSource.LevelStorageAccess levelAccess, final DataFixer fixerUpper) {
+         this.fixerUpper = fixerUpper;
+         this.playerDir = levelAccess.getLevelPath(LevelResource.PLAYER_DATA_DIR).toFile();
+@@ -36,8 +56,14 @@
+             TagValueOutput output = TagValueOutput.createWithContext(reporter, player.registryAccess());
+             player.saveWithoutId(output);
+             Path playerDirPath = this.playerDir.toPath();
++            CompoundTag dataToStore = output.buildResult();
++            // Lophine start - 异步保存玩家数据（序列化在 region 线程，压缩+写盘+rename 移出后台线程）
++            if (fun.bm.lophine.config.modules.optimizations.PlayerDataConfig.asyncSaveEnabled) {
++                submitAsync(playerDirPath, player.getUUID(), dataToStore);
++                return;
++            }
++            // Lophine end - 异步保存玩家数据
+             Path tmpFile = Files.createTempFile(playerDirPath, player.getStringUUID() + "-", ".dat");
+-            CompoundTag dataToStore = output.buildResult();
+             NbtIo.writeCompressed(dataToStore, tmpFile);
+             Path realFile = playerDirPath.resolve(player.getStringUUID() + ".dat");
+             Path oldFile = playerDirPath.resolve(player.getStringUUID() + ".dat_old");
+@@ -46,6 +72,67 @@
+             LOGGER.warn("Failed to save player data for {}", player.getPlainTextName(), var11); // Paper - Print exception
+         }
+     }
++
++    // Lophine start - 异步写盘实现
++    private static void submitAsync(final Path dir, final UUID uuid, final CompoundTag tag) {
++        ASYNC_PENDING_DIRS.put(uuid, dir);
++        ASYNC_PENDING_TAGS.put(uuid, tag);
++        ASYNC_WRITER.submit(() -> drainAsync(uuid));
++    }
++
++    private static void drainAsync(final UUID uuid) {
++        synchronized (ASYNC_LOCKS.computeIfAbsent(uuid, k -> new Object())) {
++            final CompoundTag tag = ASYNC_PENDING_TAGS.remove(uuid);
++            if (tag == null) return; // 已被更早的任务写掉
++            final Path dir = ASYNC_PENDING_DIRS.get(uuid);
++            writeAsyncOne(dir, uuid, tag);
++        }
++    }
++
++    private static void writeAsyncOne(final Path dir, final UUID uuid, final CompoundTag tag) {
++        try {
++            final Path tmp = Files.createTempFile(dir, uuid + "-", ".dat");
++            // Lophine start - 优先 libdeflate gzip 压缩（C++ 加速），失败回退 Java GZIP
++            if (fun.bm.lophine.utils.LophineGzip.isAvailable()) {
++                final java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
++                try (java.io.DataOutputStream dos = new java.io.DataOutputStream(baos)) {
++                    NbtIo.write(tag, dos); // 序列化 NBT（未压缩）
++                }
++                final byte[] compressed = fun.bm.lophine.utils.LophineGzip.compress(baos.toByteArray());
++                if (compressed != null) {
++                    Files.write(tmp, compressed);
++                    final Path real = dir.resolve(uuid + ".dat");
++                    final Path old = dir.resolve(uuid + ".dat_old");
++                    Util.safeReplaceFile(real, tmp, old);
++                    return;
++                }
++            }
++            // Lophine end - libdeflate gzip 压缩
++            try (OutputStream out = Files.newOutputStream(tmp)) { // 无 SYNC，缓冲写
++                NbtIo.writeCompressed(tag, out);
++            }
++            final Path real = dir.resolve(uuid + ".dat");
++            final Path old = dir.resolve(uuid + ".dat_old");
++            Util.safeReplaceFile(real, tmp, old);
++        } catch (IOException e) {
++            LOGGER.error("Lophine async save player data failed: {}", uuid, e);
++        }
++    }
++
++    /** 服务器关闭前调用：停止接收新任务并等待所有 pending 写盘完成。 */
++    public static void shutdownAsync() {
++        ASYNC_WRITER.shutdown();
++        try {
++            if (!ASYNC_WRITER.awaitTermination(60, TimeUnit.SECONDS)) {
++                LOGGER.error("Lophine player data writer did not finish in 60s, forcing shutdown");
++                ASYNC_WRITER.shutdownNow();
++            }
++        } catch (InterruptedException e) {
++            Thread.currentThread().interrupt();
++            ASYNC_WRITER.shutdownNow();
++        }
++    }
++    // Lophine end - 异步写盘实现
+ 
+     private void backup(final NameAndId nameAndId, final String suffix) {
+         Path playerDirPath = this.playerDir.toPath();
